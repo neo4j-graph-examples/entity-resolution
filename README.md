@@ -1,0 +1,2 @@
+# enitity_resolution
+Entity resolution, also known as Data Matching or Record linkage is the task of finding a data set that refer to the same or similar real entity across different digital entities present on same or different data sets. Record linking is necessary when joining different entities which are similar and may or may not share some common identifiers.  Neo4j offers various advantages to perform entity resolution / record linking. This repository covers such a use case of linking similar user accounts for analytics and providing better recommendations. 
