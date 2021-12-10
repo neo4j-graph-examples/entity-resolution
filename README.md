@@ -144,6 +144,7 @@ These are users who have same/similar names but different (redundant) profiles d
 
 References
 [Jaroâ€“Winkler distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance)
+
 [apoc.text.jaroWinklerDistance](https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.jaroWinklerDistance/)
 
 ```sh
@@ -240,6 +241,7 @@ Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similar
 
 ### Example 2: Find similar users by genre preference using Pearson similarity function
 [Peason Similarity - Neo4j GDS](https://neo4j.com/docs/graph-data-science/current/alpha-algorithms/pearson/)
+
 [Pearson correlation coefficient](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient)
 
 Here we are finding the users who have similar preferences as user "Lanette Laughtisse". We are comparing the similarities based on the movies they have watched from similar genre. We can use this information to provide recommendations.
