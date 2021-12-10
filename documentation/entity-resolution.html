@@ -1,0 +1,604 @@
+<style type="text/css" media="screen">
+/*
+.nodes-image {
+	margin:-100;
+}
+*/	
+@import url("//maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css");
+
+.imageblock .content img, .image img {max-width: 900px;max-height: 300px;}
+.deck h3, .deck h4 {display: block !important;margin-bottom:8px;margin-top:5px;}
+.listingblock {margin:8px;}
+.pull-bottom {position:relative;bottom:1em;}
+.admonitionblock td.icon [class^="fa icon-"]{font-size:2.5em;text-shadow:1px 1px 2px rgba(0,0,0,.5);cursor:default}
+.admonitionblock td.icon .icon-note:before{content:"\f05a";color:#19407c}
+.admonitionblock td.icon .icon-tip:before{content:"\f0eb";text-shadow:1px 1px 2px rgba(155,155,0,.8);color:#111}
+.admonitionblock td.icon .icon-warning:before{content:"\f071";color:#bf6900}
+.admonitionblock td.icon .icon-caution:before{content:"\f06d";color:#bf3400}
+.admonitionblock td.icon .icon-important:before{content:"\f06a";color:#bf0000}
+.admonitionblock.note.speaker { display:none; }
+</style>
+<style type="text/css" media="screen">
+/* #editor.maximize-editor .CodeMirror-code { font-size:24px; line-height:26px; } */
+</style>
+<article class="guide" ng-controller="AdLibDataController">
+  <carousel class="deck container-fluid">
+    <!--slide class="row-fluid">
+      <div class="col-sm-3">
+        <h3>Entity Resolution</h3>
+        <p class="lead">Information</p>
+			<!dl>
+				
+				
+				
+				
+				
+			</dl>
+		</div>
+      <div class="col-sm-9">
+        <figure>
+          <img style="width:300px" src=""/>
+        </figure>
+      </div>
+    </slide-->
+    
+
+
+   <h4>Entity Resolution</h4>
+   
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j</h3>
+    <br/>
+    <div>
+      
+
+
+   <h4>What is Entity Resolution?</h4>
+   <br>
+<div class="paragraph">
+<p>Entity Resolution (ER) is the process of disambiguating data to determine if multiple digital records represent the same real-world entity such as a person, organization, place, or other type of object.</p>
+</div>
+<div class="paragraph">
+<p>For example, say you have information on persons coming from different e-commerce platforms, or say same users with different profiles in a system.</p>
+</div>
+<div class="paragraph">
+<p>They may have slightly different contact information, with addresses formatted differently, using different forms/abbreviations of names, etc.</p>
+</div>
+<div class="paragraph">
+<p>A human may be able to tell if the records actually belong to the same underlying entity but given the number of possible combinations and matching that can be had, there is a need for an intelligent automated approach to doing so, which is where ER systems come into play.</p>
+</div>
+<div class="paragraph">
+<p>There can be numerous use cases for Entity Resolution across industries like patient history linkage in Healthcare, customers' preferences and history in Insurance and Financial Services, identifying  similar entities or groups for recommendation in E-commerce and Digital Marketing etc.</p>
+</div>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Demo Use Case</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>This demo guide covers a similar use case of performing Entity Resolution.</p>
+</div>
+<div class="paragraph">
+<p>We have taken an example of a dummy online movie streaming platform. For ease of understanding, we have taken only movies and users datasets.</p>
+</div>
+<div class="paragraph">
+<p>Users can have one or more accounts on a movie streaming platform.</p>
+</div>
+<div class="paragraph">
+<p>We are performing Entity Resolution over users’ data to identify similar/same users. We are also performing linking for users which are from same account (or group/family). Later, we are leveraging this linking to provide effective recommendations to individual users.</p>
+</div>
+
+
+
+   <h4>Data Model</h4>
+   <img src="http:\\localhost\model.PNG" class="img-responsive">
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Preparing the Graph: Loading data and creating Entities and Relationships</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>In this guide, we will perform below steps:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Load: Load information from external CSV files and create entities</p>
+</li>
+<li>
+<p>Index: Index nodes based on label</p>
+</li>
+<li>
+<p>Relate: Establish connections (relationships) between entities</p>
+</li>
+<li>
+<p>Test: Perform basic querying with Cypher on loaded data</p>
+</li>
+<li>
+<p>ER: Perform Entity Resolution based on similarity and do record linkage</p>
+</li>
+<li>
+<p>Recommend: Generate recommendation based on user similarities / preferences</p>
+</li>
+<li>
+<p>Additional: Find similar users by preferences</p>
+</li>
+</ul>
+</div>
+
+
+
+   <h4>Notes</h4>
+   <div class="paragraph">
+<p>In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) and Neo4j GDS (Graph Data Science) libraries few Cypher queries.
+To execute the Cypher queries with APOC or GDS functions, you will need to add these libraries as plugins to your Neo4j database instance.</p>
+</div>
+<div class="paragraph">
+<p>For more details on APOC and GDS, please refer below links.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://neo4j.com/developer/neo4j-apoc/" target="_blank">APOC</a></p>
+</li>
+<li>
+<p><a href="https://neo4j.com/docs/graph-data-science/current/" target="_blank">GDS</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To load data from CSV files, you must download the CSV files from below given URL and place them under &lt;NEO4J_HOME&gt;/import/entity-resolution directory. Please make sure you have placed the files before you proceed further.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="http://localhost/downloadcsv" target="_blank">Download CSV files for data import</a></p>
+</li>
+<li>
+<p><a href="https://neo4j.com/developer/guide-import-csv/" target="_blank">Guide to import data from CSV</a></p>
+</li>
+</ul>
+</div>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Load information from external CSV and create entities</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>Load IP Addresses</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/IPAddress.csv" AS row
+CREATE (n:IpAddress)
+SET n = row,
+n.ipAddressId = toInteger(row.ipAddressId),
+n.address = toString(row.address)<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Load Users</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Users.csv" AS row
+CREATE (n:User)
+SET n = row,
+n.userId = toInteger(row.userId),
+n.ipAddressId = toInteger(row.ipAddressId)<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Load Genres</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 5 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Genres.csv" AS row
+CREATE (n:Genre)
+SET n = row,
+n.name = toString(row.name),
+n.genreId = toInteger(row.genreId)<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Load Movies</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Movies.csv" AS row
+CREATE (n:Movie)
+SET n = row,
+n.movieId = toInteger(row.movieId),
+n.name = toString(row.name),
+n.year = toInteger(row.year),
+n.genreId = toInteger(row.genreId)<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Index nodes based on label</h3>
+    <br/>
+    <div>
+      <div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CREATE INDEX IF NOT EXISTS FOR (g:Genre) ON (g.genreId);
+CREATE INDEX IF NOT EXISTS FOR (u:User) ON (u.ipAddressId);
+CREATE INDEX IF NOT EXISTS FOR (u1:User) ON (u1.userId);
+CREATE INDEX IF NOT EXISTS FOR (m:Movie) ON (m.movieId);
+CREATE INDEX IF NOT EXISTS FOR (i:IpAddress) ON (i.ipAddressId);
+CREATE INDEX IF NOT EXISTS FOR (u2:User) ON (u2.state);<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Establish connections (relationships) between entities</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>Link user and ip addresses</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)
+MATCH(i:IpAddress)
+WHERE u.ipAddressId = i.ipAddressId
+MERGE (u)-[:USES]-&gt;(i)<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Link movies and genres</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (g:Genre)
+MATCH(m:Movie)
+WHERE g.genreId = m.genreId
+MERGE (m)-[:HAS]-&gt;(g)<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Load Watch Events Relationships</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "file:///entity-resolution/WatchEvent.csv" AS row
+MATCH (u:User {userId: toInteger(row.userId)})
+MATCH (m:Movie {movieId: toInteger(row.movieId)})
+MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]-&gt;(m)<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Perform basic querying with Cypher on loaded data</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>Query users who have watched movie "The Boss Baby: Family Business"</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)-[w:WATCHED]-&gt;(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,w,m LIMIT 5<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Show users from "New York" and movies watched by them</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[w:WATCHED]-&gt;(m:Movie)  RETURN u,w,m LIMIT 50<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Show trending genres in Texas</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "Texas"} )-[w:WATCHED]-&gt;(m:Movie)--&gt;(g:Genre)
+return g.name, count(g) order by count(g) desc<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Perform Entity Resolution based on similarity and do record linkage</h3>
+    <br/>
+    <div>
+      
+
+
+   <h4>Users who have similar names</h4>
+   <div class="paragraph">
+<p>These are users who have same/similar names but different (redundant) profiles due to typos or abbreviations used for some instances. We are using the Jaro Winkler Distance algorithm from the Neo4j APOC library.</p>
+</div>
+<div class="paragraph">
+<p>References</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance" target="_blank">Jaro–Winkler distance</a></p>
+</li>
+<li>
+<p><a href="https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.jaroWinklerDistance/" target="_blank">apoc.text.jaroWinklerDistance</a></p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)
+MATCH (b:User)
+WHERE a.firstName + a.lastName &lt;&gt; b.firstName + b.lastName
+WITH a, b, a.firstName + a.lastName AS norm1, b.firstName + b.lastName AS norm2
+WITH
+toInteger(apoc.text.jaroWinklerDistance(norm1, norm2) * 100) AS nameSimilarity,
+toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
+toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity, a, b
+WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity WHERE similarity &gt;= 90
+RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity<!--/code--></pre>
+</div>
+</div>
+<br>
+
+
+
+   <h4>Users belonging to same family</h4>
+   <div class="paragraph">
+<p>Users who have similar last names and live in same state, and use same IP address, that means they are either same users with redundant profile or belong to the same family</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)-[:USES]-&gt;(:IpAddress)&lt;-[:USES]-(b:User)
+WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
+WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
+UNWIND  familyMembers as member
+RETURN familyName, totalMembers,  member.firstName + ' '  + member.lastName  AS memberName<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)-[:USES]-&gt;(:IpAddress)&lt;-[:USES]-(b:User)
+WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
+WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
+MERGE (a:Family {name: familyName})
+WITH a,familyMembers
+UNWIND  familyMembers as member
+MERGE (member)-[:BELONGS_TO]-&gt;(a)<!--/code--></pre>
+</div>
+</div>
+<br>
+
+
+
+   <h4>Check how may families are created</h4>
+   <div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (f:Family)&lt;-[:BELONGS_TO]-(u:User) RETURN f, u LIMIT 200<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Generate recommendation based on user similarities / preferences</h3>
+    <br/>
+    <div>
+      <div class="paragraph">
+<p>Providing recommendation to the member based on his/her account/family members history. Get preferred genres by other account members and suggest top 5 movies from most watched genres.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (user:User {firstName: "Vilma", lastName: "De Mars"})
+MATCH (user)-[:BELONGS_TO]-&gt;(f)&lt;-[:BELONGS_TO]-(otherMember)
+MATCH (otherMember)-[:WATCHED]-&gt;(m:Movie)-[:HAS]-&gt;(g:Genre)&lt;-[:HAS]-(m2:Movie)
+WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
+RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Find similar users by preferences</h3>
+    <br/>
+    <div>
+      
+
+
+   <h4>We can also find similarity in records using properties and/or connections. We will perform couple of examples to demonstrate the same</h4>
+
+
+
+   <h4>Example 1: Find users based on their movie watching preferences using Node Similarity algorithm</h4>
+   <div class="ulist">
+<ul>
+<li>
+<p><a href="https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/" target="_blank">Node Similarity</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Step 1: For this, we will first create an in-memory graph with node and relationship specification to perform matching.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.graph.create(
+    'similarityGraph',
+    ['User', 'Movie'],
+    {
+        WATCHED: {
+            type: 'WATCHED'
+        }
+    }
+);<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Step 2: Perform memory estimate for the matching to execute</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.nodeSimilarity.write.estimate('similarityGraph', {
+  writeRelationshipType: 'SIMILAR',
+  writeProperty: 'score'
+})
+YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory<!--/code--></pre>
+</div>
+</div>
+<br>
+<div class="paragraph">
+<p>Step 3: Execute algorithm and show results.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.nodeSimilarity.stream('similarityGraph')
+YIELD node1, node2, similarity
+WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
+RETURN
+Person1.firstName + ' ' +  Person1.lastName as p1,
+Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC<!--/code--></pre>
+</div>
+</div>
+<br>
+
+
+
+   <h4>Example 2: Find similar users by genre preference using Pearson similarity function</h4>
+   <div class="ulist">
+<ul>
+<li>
+<p><a href="https://neo4j.com/docs/graph-data-science/current/alpha-algorithms/pearson/" target="_blank">Peason Similarity - Neo4j GDS</a></p>
+</li>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/Pearson_correlation_coefficient" target="_blank">Pearson correlation coefficient</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Here we are finding the users who have similar preferences as user “Lanette Laughtisse”.
+We are comparing the similarities based on the movies they have watched from similar genre. We can use this information to provide recommendations.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (p1:User {firstName:"Lanette", lastName:"Laughtisse"} )-[:WATCHED]-&gt;(m:Movie)
+MATCH (m)-[:HAS]-&gt;(g1:Genre)
+WITH p1, g1, count(m) as movieCount1
+WITH p1, gds.alpha.similarity.asVector(g1, movieCount1) AS p1Vector
+MATCH (p2:User)-[:WATCHED]-&gt;(m2:Movie)
+MATCH (m2)-[:HAS]-&gt;(g1:Genre) WHERE p2 &lt;&gt; p1
+WITH p1, g1, p1Vector, p2, count(m2) as movieCount2
+WITH p1, p2, p1Vector, gds.alpha.similarity.asVector(g1, movieCount2) AS p2Vector
+WHERE size(apoc.coll.intersection([v in p1Vector | v.category], [v in p2Vector | v.category])) &gt; 3
+WITH
+p1.firstName + ' '  + p1.lastName  AS currentUser,
+p2.firstName + ' ' + p2.lastName  AS similarUser,
+gds.alpha.similarity.pearson(p1Vector, p2Vector, {vectorType: "maps"}) AS similarity
+WHERE similarity &gt; 0.9
+RETURN currentUser,similarUser, similarity
+       ORDER BY similarity DESC
+LIMIT 100<!--/code--></pre>
+</div>
+</div>
+<br>
+
+
+
+   <h4>Full Source Code Available on GIT</h4>
+   <div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/neo4j-graph-examples/enitity_resolution" target="_blank">Source Code with Cypher and data dumps</a></p>
+</li>
+</ul>
+</div>
+
+
+
+   <h4>References</h4>
+   <div class="ulist">
+<ul>
+<li>
+<p><a href="https://neo4j.com/developer/" target="_blank">Developer resources</a></p>
+</li>
+<li>
+<p><a href="https://neo4j.com/docs/cypher-manual" target="_blank">Neo4j Cypher Manual</a></p>
+</li>
+<li>
+<p><a href="https://neo4j.com/developer-blog/exploring-supervised-entity-resolution-in-neo4j/" target="_blank">Entity Resolution in Neo4j reference</a></p>
+</li>
+</ul>
+</div>
+	</div>
+  </div>
+</slide>
+  </carousel>
+</article>

@@ -1,0 +1,158 @@
+//Load Users
+:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Users.csv" AS row
+CREATE (n:User)
+SET n = row,
+n.userId = toInteger(row.userId),
+n.ipAddressId = toInteger(row.ipAddressId)
+
+//Load IP Addresses
+:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/IPAddress.csv" AS row
+CREATE (n:IpAddress)
+SET n = row,
+n.ipAddressId = toInteger(row.ipAddressId),
+n.address = toString(row.address)
+
+//Load Genres
+:auto USING PERIODIC COMMIT 5 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Genres.csv" AS row
+CREATE (n:Genre)
+SET n = row,
+n.name = toString(row.name),
+n.genreId = toInteger(row.genreId)
+
+//Load Movies
+:auto USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Movies.csv" AS row
+CREATE (n:Movie)
+SET n = row,
+n.movieId = toInteger(row.movieId),
+n.name = toString(row.name),
+n.year = toInteger(row.year),
+n.genreId = toInteger(row.genreId)
+
+// Indexes
+CREATE INDEX IF NOT EXISTS FOR (g:Genre) ON (g.genreId);
+CREATE INDEX IF NOT EXISTS FOR (u:User) ON (u.ipAddressId);
+CREATE INDEX IF NOT EXISTS FOR (u1:User) ON (u1.userId);
+CREATE INDEX IF NOT EXISTS FOR (m:Movie) ON (m.movieId);
+CREATE INDEX IF NOT EXISTS FOR (i:IpAddress) ON (i.ipAddressId);
+CREATE INDEX IF NOT EXISTS FOR (u2:User) ON (u2.state);
+
+
+//Link user and ip addresses
+MATCH (u:User)
+MATCH(i:IpAddress)
+WHERE u.ipAddressId = i.ipAddressId
+MERGE (u)-[:USES]->(i)
+
+//Link movies and genres
+MATCH (g:Genre)
+MATCH(m:Movie)
+WHERE g.genreId = m.genreId
+MERGE (m)-[:HAS]->(g)
+
+//Load Watch Events Relationships - Execute this after loading user and movies
+LOAD CSV WITH HEADERS FROM "file:///entity-resolution/WatchEvent.csv" AS row
+MATCH (u:User {userId: toInteger(row.userId)})
+MATCH (m:Movie {movieId: toInteger(row.movieId)})  
+MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]->(m)
+
+// Query users who have watched movie "The Boss Baby: Family Business"
+MATCH (u:User)-[w:WATCHED]->(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,w,m LIMIT 5
+
+// Show users from "New York" and movies watched by them
+MATCH (u:User {state: "New York"} )-[w:WATCHED]->(m:Movie)  RETURN u,w,m LIMIT 50
+
+// Show trending genres in Texas
+MATCH (u:User {state: "Texas"} )-[w:WATCHED]->(m:Movie)-->(g:Genre)
+return g.name, count(g) order by count(g) desc
+
+//Users who have similar names
+// These are users who have same/similar names but different (redundant) accounts due to typos or abbreviations used for some instance
+MATCH (a:User)
+MATCH (b:User)
+WHERE a.firstName + a.lastName <> b.firstName + b.lastName
+WITH a, b, a.firstName + a.lastName AS norm1, b.firstName + b.lastName AS norm2
+WITH 
+toInteger(apoc.text.jaroWinklerDistance(norm1, norm2) * 100) AS nameSimilarity,
+toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
+toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity, a, b
+WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity WHERE similarity >= 90
+RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity
+
+//Users belonging to same family
+//Find users who have similar last names and live in same state, and connected using same IP address, that means they are either same users with redundant account or belong to the same family
+MATCH (a:User)-[:USES]->(:IpAddress)<-[:USES]-(b:User)
+WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
+WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
+UNWIND  familyMembers as member
+RETURN familyName, totalMembers,  member.firstName + ' '  + member.lastName  AS memberName
+
+//Create Family Nodes for each family and connect members
+MATCH (a:User)-[:USES]->(:IpAddress)<-[:USES]-(b:User)
+WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
+WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
+MERGE (a:Family {name: familyName})
+WITH a,familyMembers
+UNWIND  familyMembers as member
+MERGE (member)-[:BELONGS_TO]->(a)
+
+//Show all families
+MATCH (f:Family)<-[:BELONGS_TO]-(u:User) RETURN f, u LIMIT 200
+
+//Providing recommendation to the member bease on his account\family members history
+//Check other genres preferred by account members and suggest top 5 movies from most watched genres
+MATCH (user:User {firstName: "Vilma", lastName: "De Mars"})
+MATCH (user)-[:BELONGS_TO]->(f)<-[:BELONGS_TO]-(otherMember)
+MATCH (otherMember)-[:WATCHED]->(m:Movie)-[:HAS]->(g:Genre)<-[:HAS]-(m2:Movie)
+WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
+RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50 
+
+//Find users based on their movie watching preferences using Node Similarity algorithm
+//Node Similarity-Create Graph
+//CREATE GRAPH FOR Node Similarity
+CALL gds.graph.create(
+    'similarityGraph',
+    ['User', 'Movie'],
+    {
+        WATCHED: {
+            type: 'WATCHED'
+        }
+    }
+);
+
+//Node Similarity - Graph Memory Estimate
+//The following will estimate the memory requirements for running the algorithm
+CALL gds.nodeSimilarity.write.estimate('similarityGraph', {
+  writeRelationshipType: 'SIMILAR',
+  writeProperty: 'score'
+})
+YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory
+
+//Node Similarity - Execute algorithm and show results
+//The following will run the algorithm, and stream results
+CALL gds.nodeSimilarity.stream('similarityGraph')
+YIELD node1, node2, similarity
+WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
+RETURN 
+Person1.firstName + ' ' +  Person1.lastName as p1,
+Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC
+
+//Find similar users by genre preference using Pearson similarity function
+//Here we are finding the users who have similar preferences as Lanette Laughtisse
+//We are comparing the similarities based on the movies they have watched from similar genre
+MATCH (p1:User {firstName:"Lanette", lastName:"Laughtisse"} )-[:WATCHED]->(m:Movie)
+MATCH (m)-[:HAS]->(g1:Genre) 
+WITH p1, g1, count(m) as movieCount1
+WITH p1, gds.alpha.similarity.asVector(g1, movieCount1) AS p1Vector
+MATCH (p2:User)-[:WATCHED]->(m2:Movie)
+MATCH (m2)-[:HAS]->(g1:Genre) WHERE p2 <> p1
+WITH p1, g1, p1Vector, p2, count(m2) as movieCount2
+WITH p1, p2, p1Vector, gds.alpha.similarity.asVector(g1, movieCount2) AS p2Vector
+WHERE size(apoc.coll.intersection([v in p1Vector | v.category], [v in p2Vector | v.category])) > 3
+WITH 
+p1.firstName + ' '  + p1.lastName  AS currentUser,
+p2.firstName + ' ' + p2.lastName  AS similarUser,
+gds.alpha.similarity.pearson(p1Vector, p2Vector, {vectorType: "maps"}) AS similarity
+WHERE similarity > 0.9
+RETURN currentUser,similarUser, similarity
+       ORDER BY similarity DESC
+LIMIT 100
