@@ -41,7 +41,7 @@ In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) an
 
 To load data from CSV files, you must download the CSV files from below given URL and place them under <NEO4J_HOME>/import/entity-resolution directory. Please make sure you have placed the files before you proceed further.
 
-[Download CSV files for data import](https://github.com/neo4j-graph-examples/enitity_resolution/data/csv)
+[Download CSV files for data import](https://github.com/neo4j-graph-examples/enitity_resolution/tree/main/data/csv)
 
 [Guide to import data from CSV](https://neo4j.com/developer/guide-import-csv/)
 
