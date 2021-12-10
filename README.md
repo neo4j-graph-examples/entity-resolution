@@ -144,7 +144,7 @@ These are users who have same/similar names but different (redundant) profiles d
 
 References
 
-[Jaroâ€“Winkler distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance)
+[Jaro Winkler distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance)
 
 [apoc.text.jaroWinklerDistance](https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.jaroWinklerDistance/)
 
