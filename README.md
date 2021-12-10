@@ -143,6 +143,7 @@ return g.name, count(g) order by count(g) desc
 These are users who have same/similar names but different (redundant) profiles due to typos or abbreviations used for some instances. We are using the Jaro Winkler Distance algorithm from the Neo4j APOC library.
 
 References
+
 [Jaroâ€“Winkler distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance)
 
 [apoc.text.jaroWinklerDistance](https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.jaroWinklerDistance/)
