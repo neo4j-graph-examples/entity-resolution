@@ -27,7 +27,7 @@ In this guide, we will perform below steps:
 * Load: Load information from external CSV files and create entities
 * Index: Index nodes based on label
 * Relate: Establish connections (relationships) between entities
-* Test: Perform basic querying with Cypher on loaded data
+* Test: Perform basic querying with on loaded data
 * ER: Perform Entity Resolution based on similarity and do record linkage
 * Recommend: Generate recommendation based on user similarities / preferences
 * Additional: Find similar users by preferences
@@ -121,7 +121,7 @@ MATCH (m:Movie {movieId: toInteger(row.movieId)})
 MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]->(m)
 ```
 
-## Perform basic querying with Cypher on loaded data
+## Perform basic querying on loaded data
 
 ### Query users who have watched movie "The Boss Baby: Family Business"
 
