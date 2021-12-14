@@ -1,7 +1,7 @@
 # Entity Resolution
 What is Entity Resolution (ER)?
 Entity Resolution (ER) is the process of disambiguating data to determine if multiple digital records represent the same real-world entity such as a person, organization, place, or other type of object.
-For example, say you have information on persons coming from different e-commerce platforms. They may have slightly different contact information, with addresses formatted differently, using different forms/abbreviations of names, etc.
+For example, say you have information on persons coming from different e-commerce platforms. They may have slightly different contact information, with addresses formatted differently, using different forms\abbreviations of names, etc.
 A human may be able to tell if the records actually belong to the same underlying entity but given the number of possible combinations and matching that can be had, there is a need for an intelligent automated approach to doing so, which is where ER systems come into play.
 
 ## Use cases
