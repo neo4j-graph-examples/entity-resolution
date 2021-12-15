@@ -109,7 +109,7 @@
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Preparing the Graph: Loading data and creating Entities and Relationships</h3>
+    <h3>Preparing the Graph: Loading data and creating Nodes and Relationships</h3>
     <br/>
     <div>
       <div class="paragraph">
@@ -118,13 +118,10 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Load: Load information from external CSV files and create entities</p>
+<p>Load: Load nodes and relationship information from external CSV files and create entities</p>
 </li>
 <li>
-<p>Index: Index nodes based on label</p>
-</li>
-<li>
-<p>Relate: Establish connections (relationships) between entities</p>
+<p>Relate: Establish more connections (relationships) between entities</p>
 </li>
 <li>
 <p>Test: Perform basic querying with Cypher on loaded data</p>
@@ -136,7 +133,7 @@
 <p>Recommend: Generate recommendation based on user similarities / preferences</p>
 </li>
 <li>
-<p>Additional: Find similar users by preferences</p>
+<p>Additional: Try couple of preference based similarities and recommendation examples</p>
 </li>
 </ul>
 </div>
@@ -161,19 +158,6 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p>To load data from CSV files, you must download the CSV files from below given URL and place them under &lt;NEO4J_HOME&gt;/import/entity-resolution directory. Please make sure you have placed the files before you proceed further.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="http://localhost/downloadcsv" target="_blank">Download CSV files for data import</a></p>
-</li>
-<li>
-<p><a href="https://neo4j.com/developer/guide-import-csv/" target="_blank">Guide to import data from CSV</a></p>
-</li>
-</ul>
-</div>
 	</div>
   </div>
 </slide>
@@ -182,7 +166,7 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Load information from external CSV and create entities</h3>
+    <h3>Load nodes and relationship information from external CSV files and create entities</h3>
     <br/>
     <div>
       <div class="paragraph">
@@ -190,24 +174,28 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/IPAddress.csv" AS row
-CREATE (n:IpAddress)
-SET n = row,
-n.ipAddressId = toInteger(row.ipAddressId),
-n.address = toString(row.address)<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/IPAddress.csv" AS row
+CREATE (i:IpAddress { ipAddressId: toInteger(row.ipAddressId), address: toString(row.address) });
+
+//Add constraints
+CREATE CONSTRAINT ip_address_id IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.ipAddressId IS UNIQUE;
+CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;<!--/code--></pre>
 </div>
 </div>
 <br>
 <div class="paragraph">
-<p>Load Users</p>
+<p>Load Users and create "USES" relationships with IP Addresses</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Users.csv" AS row
-CREATE (n:User)
-SET n = row,
-n.userId = toInteger(row.userId),
-n.ipAddressId = toInteger(row.ipAddressId)<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Users.csv" AS row
+CREATE (u:User { userId: toInteger(row.userId), firstName: row.firstName, lastName: row.lastName, gender: row.gender, email: row.email, phone: row.phone, state: row.state,  country: row.country })
+WITH u, row
+MATCH (i:IpAddress) WHERE i.ipAddressId = toInteger(row.ipAddressId)
+MERGE (u)-[uses:USES]-&gt;(i) RETURN u, uses, i;
+
+//Add constraints
+CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -216,26 +204,29 @@ n.ipAddressId = toInteger(row.ipAddressId)<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 5 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Genres.csv" AS row
-CREATE (n:Genre)
-SET n = row,
-n.name = toString(row.name),
-n.genreId = toInteger(row.genreId)<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Genres.csv" AS row
+CREATE (g:Genre { name: toString(row.name), genreId: toInteger(row.genreId) });
+
+//Add constraints
+CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
+CREATE CONSTRAINT genre_id IF NOT EXISTS FOR (g:Genre) REQUIRE g.genreId IS UNIQUE;<!--/code--></pre>
 </div>
 </div>
 <br>
 <div class="paragraph">
-<p>Load Movies</p>
+<p>Load Movies and link them with Genres using a relationship "HAS"</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->:auto USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Movies.csv" AS row
-CREATE (n:Movie)
-SET n = row,
-n.movieId = toInteger(row.movieId),
-n.name = toString(row.name),
-n.year = toInteger(row.year),
-n.genreId = toInteger(row.genreId)<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Movies.csv" AS row
+CREATE (m:Movie { movieId: toInteger(row.movieId), name: toString(row.name), year: toInteger(row.year) })
+WITH m, row
+MATCH (g:Genre) WHERE g.genreId = toInteger(row.genreId)
+MERGE (g)&lt;-[h:HAS]-(m) RETURN m, h, g;
+
+//Add constraints
+CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
+CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -247,64 +238,18 @@ n.genreId = toInteger(row.genreId)<!--/code--></pre>
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Index nodes based on label</h3>
-    <br/>
-    <div>
-      <div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CREATE INDEX IF NOT EXISTS FOR (g:Genre) ON (g.genreId);
-CREATE INDEX IF NOT EXISTS FOR (u:User) ON (u.ipAddressId);
-CREATE INDEX IF NOT EXISTS FOR (u1:User) ON (u1.userId);
-CREATE INDEX IF NOT EXISTS FOR (m:Movie) ON (m.movieId);
-CREATE INDEX IF NOT EXISTS FOR (i:IpAddress) ON (i.ipAddressId);
-CREATE INDEX IF NOT EXISTS FOR (u2:User) ON (u2.state);<!--/code--></pre>
-</div>
-</div>
-<br>
-	</div>
-  </div>
-</slide>
-
-
-
-<slide class="row-fluid">
-  <div class="col-sm-12">
-    <h3>Establish connections (relationships) between entities</h3>
+    <h3>Establish more connections (relationships) between entities</h3>
     <br/>
     <div>
       <div class="paragraph">
-<p>Link user and ip addresses</p>
+<p>Load data and create "WATCHED" relationships between Users who have watched whatever Movies</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)
-MATCH(i:IpAddress)
-WHERE u.ipAddressId = i.ipAddressId
-MERGE (u)-[:USES]-&gt;(i)<!--/code--></pre>
-</div>
-</div>
-<br>
-<div class="paragraph">
-<p>Link movies and genres</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (g:Genre)
-MATCH(m:Movie)
-WHERE g.genreId = m.genreId
-MERGE (m)-[:HAS]-&gt;(g)<!--/code--></pre>
-</div>
-</div>
-<br>
-<div class="paragraph">
-<p>Load Watch Events Relationships</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "file:///entity-resolution/WatchEvent.csv" AS row
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/WatchEvent.csv" AS row
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})
-MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]-&gt;(m)<!--/code--></pre>
+MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -333,7 +278,7 @@ MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]-&gt;(m)<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[w:WATCHED]-&gt;(m:Movie)  RETURN u,w,m LIMIT 50<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[w:WATCHED]-&gt;(m:Movie)  RETURN u, w, m LIMIT 50<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -355,7 +300,7 @@ return g.name, count(g) order by count(g) desc<!--/code--></pre>
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Perform Entity Resolution based on similarity and do record linkage</h3>
+    <h3>Perform Entity Resolution based on similarity and perform record linkage</h3>
     <br/>
     <div>
       
@@ -404,9 +349,8 @@ RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, 
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)-[:USES]-&gt;(:IpAddress)&lt;-[:USES]-(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
-WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
-UNWIND  familyMembers as member
-RETURN familyName, totalMembers,  member.firstName + ' '  + member.lastName  AS memberName<!--/code--></pre>
+WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
+RETURN familyName, memberCount, members<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -443,7 +387,7 @@ MERGE (member)-[:BELONGS_TO]-&gt;(a)<!--/code--></pre>
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Generate recommendation based on user similarities / preferences</h3>
+    <h3>Generate recommendation based on user&#8217;s family or group similarities / preferences</h3>
     <br/>
     <div>
       <div class="paragraph">
@@ -453,7 +397,7 @@ MERGE (member)-[:BELONGS_TO]-&gt;(a)<!--/code--></pre>
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (user:User {firstName: "Vilma", lastName: "De Mars"})
 MATCH (user)-[:BELONGS_TO]-&gt;(f)&lt;-[:BELONGS_TO]-(otherMember)
-MATCH (otherMember)-[:WATCHED]-&gt;(m:Movie)-[:HAS]-&gt;(g:Genre)&lt;-[:HAS]-(m2:Movie)
+MATCH (otherMember)-[:WATCHED]-&gt;(m1)-[:HAS]-&gt;(g:Genre)&lt;-[:HAS]-(m2)
 WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
 RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50<!--/code--></pre>
 </div>
@@ -467,18 +411,13 @@ RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DE
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Find similar users by preferences</h3>
+    <h3>Using Neo4j Node Similarity Algorigthm to find similar users and get recommendations</h3>
     <br/>
     <div>
-      
-
-
-   <h4>We can also find similarity in records using properties and/or connections. We will perform couple of examples to demonstrate the same</h4>
-
-
-
-   <h4>Example 1: Find users based on their movie watching preferences using Node Similarity algorithm</h4>
-   <div class="ulist">
+      <div class="paragraph">
+<p>Find users based on their movie watching preferences using Node Similarity algorithm</p>
+</div>
+<div class="ulist">
 <ul>
 <li>
 <p><a href="https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/" target="_blank">Node Similarity</a></p>
@@ -486,7 +425,7 @@ RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DE
 </ul>
 </div>
 <div class="paragraph">
-<p>Step 1: For this, we will first create an in-memory graph with node and relationship specification to perform matching.</p>
+<p>Step 1: For this, we will first create an in-memory graph with node and relationship specification to perform matching</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -495,7 +434,13 @@ RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DE
     ['User', 'Movie'],
     {
         WATCHED: {
-            type: 'WATCHED'
+            type: 'WATCHED',
+            properties: {
+                strength: {
+                    property: 'watchCount',
+                    defaultValue: 1
+                }
+            }
         }
     }
 );<!--/code--></pre>
@@ -516,7 +461,7 @@ YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory<!--/code-
 </div>
 <br>
 <div class="paragraph">
-<p>Step 3: Execute algorithm and show results.</p>
+<p>Step 3: Execute algorithm and show results</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -529,11 +474,33 @@ Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similar
 </div>
 </div>
 <br>
+<div class="paragraph">
+<p>Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.nodeSimilarity.stream('similarityGraph')
+YIELD node1, node2, similarity
+WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
+WHERE Person1.firstName = 'Paulie' AND Person1.lastName = 'Imesson'
+MATCH (Person2)-[w:WATCHED]-&gt;(m) WHERE NOT exists((Person1)--&gt;(m))
+WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
+RETURN movies order by watchCount<!--/code--></pre>
+</div>
+</div>
+<br>
+	</div>
+  </div>
+</slide>
 
 
 
-   <h4>Example 2: Find similar users by genre preference using Pearson similarity function</h4>
-   <div class="ulist">
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Using Pearson Similarity Algorigthm to find similar users based on Genre preference and get recommendations</h3>
+    <br/>
+    <div>
+      <div class="ulist">
 <ul>
 <li>
 <p><a href="https://neo4j.com/docs/graph-data-science/current/alpha-algorithms/pearson/" target="_blank">Peason Similarity - Neo4j GDS</a></p>
@@ -544,7 +511,7 @@ Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similar
 </ul>
 </div>
 <div class="paragraph">
-<p>Here we are finding the users who have similar preferences as user “Lanette Laughtisse”.
+<p>Here we are finding the users who have similar Genre preferences as user Lanette Laughtisse.
 We are comparing the similarities based on the movies they have watched from similar genre. We can use this information to provide recommendations.</p>
 </div>
 <div class="listingblock">
@@ -569,7 +536,42 @@ LIMIT 100<!--/code--></pre>
 </div>
 </div>
 <br>
+<div class="paragraph">
+<p>Get recommendations for a user using similar order users' preferenes by fetching similar users using Pearson Similarity function</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (p1:User {firstName:"Lanette", lastName:"Laughtisse"} )-[:WATCHED]-&gt;(m:Movie)
+MATCH (m)-[:HAS]-&gt;(g1:Genre)
+WITH p1, g1, count(m) as movieCount1
+WITH p1, gds.alpha.similarity.asVector(g1, movieCount1) AS p1Vector
+MATCH (p2:User)-[:WATCHED]-&gt;(m2:Movie)
+MATCH (m2)-[:HAS]-&gt;(g1:Genre) WHERE p2 &lt;&gt; p1
+WITH p1, g1, p1Vector, p2, count(m2) as movieCount2
+WITH p1, p2, p1Vector, gds.alpha.similarity.asVector(g1, movieCount2) AS p2Vector
+WHERE size(apoc.coll.intersection([v in p1Vector | v.category], [v in p2Vector | v.category])) &gt; 3
+WITH
+p1 AS currentUser,
+p2 AS similarUser,
+gds.alpha.similarity.pearson(p1Vector, p2Vector, {vectorType: "maps"}) AS similarity
+WHERE similarity &gt; 0.9
+MATCH (similarUser)-[w:WATCHED]-&gt;(m)
+WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
+RETURN movies order by watchCount<!--/code--></pre>
+</div>
+</div>
+	</div>
+  </div>
+</slide>
 
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Next steps</h3>
+    <br/>
+    <div>
+      
 
 
    <h4>Full Source Code Available on GIT</h4>
@@ -580,6 +582,22 @@ LIMIT 100<!--/code--></pre>
 </li>
 </ul>
 </div>
+<br>
+
+
+
+   <h4>More code</h4>
+   <div class="ulist">
+<ul>
+<li>
+<p><a play-topic="movie-graph">Movie Graph</a> - actors & movies</p>
+</li>
+<li>
+<p><a play-topic="cypher">Cypher</a> - query language fundamentals</p>
+</li>
+</ul>
+</div>
+<br>
 
 
 

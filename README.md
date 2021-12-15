@@ -24,13 +24,12 @@ This repository covers such a use case of linking similar user accounts for anal
 ## Preparing the Graph: Loading data and creating Entities and Relationships
 In this guide, we will perform below steps:
 
-* Load: Load information from external CSV files and create entities
-* Index: Index nodes based on label
-* Relate: Establish connections (relationships) between entities
-* Test: Perform basic querying with on loaded data
+* Load: Load nodes and relationship information from external CSV files and create entities
+* Relate: Establish more connections (relationships) between entities
+* Test: Perform basic querying with Cypher on loaded data
 * ER: Perform Entity Resolution based on similarity and do record linkage
 * Recommend: Generate recommendation based on user similarities / preferences
-* Additional: Find similar users by preferences
+* Additional: Try couple of preference based similarities and recommendation examples
 
 ### Notes
 In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) and Neo4j GDS (Graph Data Science) libraries few Cypher queries. To execute the Cypher queries with APOC or GDS functions, you will need to add these libraries as plugins to your Neo4j database instance. For more details on APOC and GDS, please refer below links.
@@ -39,86 +38,61 @@ In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) an
 
 [GDS](https://neo4j.com/docs/graph-data-science/current/)
 
-To load data from CSV files, you must download the CSV files from below given URL and place them under <NEO4J_HOME>/import/entity-resolution directory. Please make sure you have placed the files before you proceed further.
-
-[Download CSV files for data import](https://github.com/neo4j-graph-examples/enitity_resolution/tree/main/data/csv)
-
-[Guide to import data from CSV](https://neo4j.com/developer/guide-import-csv/)
-
-## Load information from external CSV and create entities
+## Load nodes and relationship information from external CSV files and create entities
 
 ### Load IP Addresses
  ```sh
-:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/IPAddress.csv" AS row
-CREATE (n:IpAddress)
-SET n = row,
-n.ipAddressId = toInteger(row.ipAddressId),
-n.address = toString(row.address)
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/IPAddress.csv" AS row
+CREATE (i:IpAddress { ipAddressId: toInteger(row.ipAddressId), address: toString(row.address) });
+
+//Add constraints
+CREATE CONSTRAINT ip_address_id IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.ipAddressId IS UNIQUE;
+CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
 ```
 
-### Load Users
+### Load Users and create "USES" relationships with IP Addresses
  ```sh
-:auto USING PERIODIC COMMIT 100 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Users.csv" AS row
-CREATE (n:User)
-SET n = row,
-n.userId = toInteger(row.userId),
-n.ipAddressId = toInteger(row.ipAddressId)
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Users.csv" AS row
+CREATE (u:User { userId: toInteger(row.userId), firstName: row.firstName, lastName: row.lastName, gender: row.gender, email: row.email, phone: row.phone, state: row.state,  country: row.country })
+WITH u, row
+MATCH (i:IpAddress) WHERE i.ipAddressId = toInteger(row.ipAddressId)
+MERGE (u)-[uses:USES]->(i) RETURN u, uses, i;
+
+//Add constraints
+CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
 ```
 
 ### Load Genres
  ```sh
-:auto USING PERIODIC COMMIT 5 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Genres.csv" AS row
-CREATE (n:Genre)
-SET n = row,
-n.name = toString(row.name),
-n.genreId = toInteger(row.genreId)
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Genres.csv" AS row
+CREATE (g:Genre { name: toString(row.name), genreId: toInteger(row.genreId) });
+
+//Add constraints
+CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
+CREATE CONSTRAINT genre_id IF NOT EXISTS FOR (g:Genre) REQUIRE g.genreId IS UNIQUE;
 ```
 
-### Load Movies
+### Load Movies and link them with Genres using a relationship "HAS"
  ```sh
-:auto USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM "file:///entity-resolution/Movies.csv" AS row
-CREATE (n:Movie)
-SET n = row,
-n.movieId = toInteger(row.movieId),
-n.name = toString(row.name),
-n.year = toInteger(row.year),
-n.genreId = toInteger(row.genreId)
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Movies.csv" AS row
+CREATE (m:Movie { movieId: toInteger(row.movieId), name: toString(row.name), year: toInteger(row.year) })
+WITH m, row
+MATCH (g:Genre) WHERE g.genreId = toInteger(row.genreId)
+MERGE (g)<-[h:HAS]-(m) RETURN m, h, g;
+
+//Add constraints
+CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
+CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;
 ```
 
-## Index nodes based on label
+## Create connections (relationships) between entities
 
+### Load data and create "WATCHED" relationships between Users who have watched whatever Movies
  ```sh
-CREATE INDEX IF NOT EXISTS FOR (g:Genre) ON (g.genreId);
-CREATE INDEX IF NOT EXISTS FOR (u:User) ON (u.ipAddressId);
-CREATE INDEX IF NOT EXISTS FOR (u1:User) ON (u1.userId);
-CREATE INDEX IF NOT EXISTS FOR (m:Movie) ON (m.movieId);
-CREATE INDEX IF NOT EXISTS FOR (i:IpAddress) ON (i.ipAddressId);
-CREATE INDEX IF NOT EXISTS FOR (u2:User) ON (u2.state);
- ```
- 
-## Establish connections (relationships) between entities
-
-### Link user and ip addresses
- ```sh
-MATCH (u:User)
-MATCH(i:IpAddress)
-WHERE u.ipAddressId = i.ipAddressId
-MERGE (u)-[:USES]->(i)
-```
-### Link movies and genres
- ```sh
-MATCH (g:Genre)
-MATCH(m:Movie)
-WHERE g.genreId = m.genreId
-MERGE (m)-[:HAS]->(g)
-```
-
-### Load Watch Events Relationships
- ```sh
-LOAD CSV WITH HEADERS FROM "file:///entity-resolution/WatchEvent.csv" AS row
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/WatchEvent.csv" AS row
 MATCH (u:User {userId: toInteger(row.userId)})
-MATCH (m:Movie {movieId: toInteger(row.movieId)})
-MERGE (u)-[:WATCHED { timeStamp: row.timestamp }]->(m)
+MATCH (m:Movie {movieId: toInteger(row.movieId)})  
+MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]->(m)
 ```
 
 ## Perform basic querying on loaded data
@@ -153,7 +127,7 @@ MATCH (a:User)
 MATCH (b:User)
 WHERE a.firstName + a.lastName <> b.firstName + b.lastName
 WITH a, b, a.firstName + a.lastName AS norm1, b.firstName + b.lastName AS norm2
-WITH
+WITH 
 toInteger(apoc.text.jaroWinklerDistance(norm1, norm2) * 100) AS nameSimilarity,
 toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
 toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity, a, b
@@ -167,9 +141,8 @@ Users who have similar last names and live in same state, and use same IP addres
 ```sh
 MATCH (a:User)-[:USES]->(:IpAddress)<-[:USES]-(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
-WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
-UNWIND  familyMembers as member
-RETURN familyName, totalMembers,  member.firstName + ' '  + member.lastName  AS memberName
+WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
+RETURN familyName, memberCount, members
 ```
 
 ### Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node
@@ -181,8 +154,6 @@ MERGE (a:Family {name: familyName})
 WITH a,familyMembers
 UNWIND  familyMembers as member
 MERGE (member)-[:BELONGS_TO]->(a)
-Check how may families are created
-MATCH (f:Family)<-[:BELONGS_TO]-(u:User) RETURN f, u LIMIT 200
 ```
 
 ### Check how may families are created
@@ -197,16 +168,13 @@ Providing recommendation to the member based on his/her account/family members h
 ```sh
 MATCH (user:User {firstName: "Vilma", lastName: "De Mars"})
 MATCH (user)-[:BELONGS_TO]->(f)<-[:BELONGS_TO]-(otherMember)
-MATCH (otherMember)-[:WATCHED]->(m:Movie)-[:HAS]->(g:Genre)<-[:HAS]-(m2:Movie)
+MATCH (otherMember)-[:WATCHED]->(m1)-[:HAS]->(g:Genre)<-[:HAS]-(m2)
 WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
-RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50
+RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50 
 ```
 
-## Find similar users by preferences
+## Using Neo4j Node Similarity Algorigthm to find similar users and get recommendations
 
-We can also find similarity in records using properties and/or connections. We will perform couple of examples to demonstrate the same
-
-### Example 1: Find users based on their movie watching preferences using Node Similarity algorithm
 [Node Similarity](https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/)
 
 #### Step 1: For this, we will first create an in-memory graph with node and relationship specification to perform matching.
@@ -216,7 +184,13 @@ CALL gds.graph.create(
     ['User', 'Movie'],
     {
         WATCHED: {
-            type: 'WATCHED'
+            type: 'WATCHED',
+            properties: {
+                strength: {
+                    property: 'watchCount',
+                    defaultValue: 1
+                }
+            }
         }
     }
 );
@@ -234,13 +208,23 @@ YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory
 CALL gds.nodeSimilarity.stream('similarityGraph')
 YIELD node1, node2, similarity
 WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
-RETURN
+RETURN 
 Person1.firstName + ' ' +  Person1.lastName as p1,
 Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC
 ```
+#### Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences
+```sh
+CALL gds.nodeSimilarity.stream('similarityGraph')
+YIELD node1, node2, similarity
+WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
+WHERE Person1.firstName = 'Paulie' AND Person1.lastName = 'Imesson'
+MATCH (Person2)-[w:WATCHED]->(m) WHERE NOT exists((Person1)-->(m))
+WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
+RETURN movies order by watchCount
+```
 
+## Using Pearson Similarity Algorigthm to find similar users based on Genre preference and get recommendations
 
-### Example 2: Find similar users by genre preference using Pearson similarity function
 [Peason Similarity - Neo4j GDS](https://neo4j.com/docs/graph-data-science/current/alpha-algorithms/pearson/)
 
 [Pearson correlation coefficient](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient)
@@ -264,6 +248,27 @@ WHERE similarity > 0.9
 RETURN currentUser,similarUser, similarity
        ORDER BY similarity DESC
 LIMIT 100
+```
+Get recommendations for a user using similar order users' preferenes by fetching similar users using Pearson Similarity function
+
+```sh
+MATCH (p1:User {firstName:"Lanette", lastName:"Laughtisse"} )-[:WATCHED]->(m:Movie)
+MATCH (m)-[:HAS]->(g1:Genre) 
+WITH p1, g1, count(m) as movieCount1
+WITH p1, gds.alpha.similarity.asVector(g1, movieCount1) AS p1Vector
+MATCH (p2:User)-[:WATCHED]->(m2:Movie)
+MATCH (m2)-[:HAS]->(g1:Genre) WHERE p2 <> p1
+WITH p1, g1, p1Vector, p2, count(m2) as movieCount2
+WITH p1, p2, p1Vector, gds.alpha.similarity.asVector(g1, movieCount2) AS p2Vector
+WHERE size(apoc.coll.intersection([v in p1Vector | v.category], [v in p2Vector | v.category])) > 3
+WITH 
+p1 AS currentUser,
+p2 AS similarUser,
+gds.alpha.similarity.pearson(p1Vector, p2Vector, {vectorType: "maps"}) AS similarity
+WHERE similarity > 0.9
+MATCH (similarUser)-[w:WATCHED]->(m) 
+WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
+RETURN movies order by watchCount
 ```
 
 ## References
