@@ -91,11 +91,11 @@ movieId,name,year,genreId
 90,The Marksman,2021,7
 91,Chaos Walking,2021,7
 92,Monster Hunter,2021,7
-93,The Protégé,2021,7
+93,The Protege,2021,7
 94,CopShop,2021,7
 95,Nou fo,2021,7
 96,Tenet,2021,7
-97,Kôkaku kidôtai,2021,7
+97,Kokaku kidotai,2021,7
 98,World War Z,2021,7
 99,Mogadisyu,2021,7
 100,Doctor,2021,7
@@ -106,7 +106,7 @@ movieId,name,year,genreId
 105,Jurassic World,2021,7
 106,Trigger Point,2021,7
 107,Prisoners of the Ghostland,2021,7
-108,A Soldier’s Story 2: Return…,2021,7
+108,A Soldier's Story 2: Return,2021,7
 109,Archenemy,2021,7
 110,Equal Standard,2021,7
 111,Average Joe,2021,7
@@ -119,35 +119,35 @@ movieId,name,year,genreId
 118,The Boss Baby: Family Business,2021,8
 119,The Addams Family 2,2021,8
 120,Raya and the Last Dragon,2021,8
-121,Kimetsu no Yaiba: Mugen Res…,2021,8
+121,Kimetsu no Yaiba,2021,8
 122,Tom and Jerry,2021,8
 123,Clifford the Big Red Dog,2021,8
 124,Peter Rabbit 2: The Runaway,2021,8
 125,PAW Patrol: The Movie,2021,8
 126,The Croods: A New Age,2021,8
-127,Ron’s Gone Wrong,2021,8
+127,Ron's Gone Wrong,2021,8
 128,Spirit Untamed,2021,8
 129,The Green Knight,2021,8
-130,Boku no Hero Academia: Worl…,2021,8
+130,Boku no Hero Academia,2021,8
 131,Pinocchio,2021,8
 132,Scoob!,2021,8
 133,The Emperor's New Groove,2021,8
-134,Âya to majo,2021,8
+134,Aya to majo,2021,8
 135,Abominable,2021,8
 136,Cryptozoo,2021,8
 137,Mystery of the Kingdom of God,2021,8
 138,The Laws Of The Universe,2021,8
 139,A Quiet Place: Part II,2021,9
 140,Halloween Kills,2021,9
-141,The Conjuring: The Devil Ma…,2021,9
+141,The Conjuring: The Devil Made Me Do It,2021,9
 142,Candyman,2021,9
 143,The Forever Purge,2021,9
-144,Don’t Breathe 2,2021,9
-145,Escape Room: Tournament of …,2021,9
+144,Don't Breathe 2,2021,9
+145,Escape Room,2021,9
 146,Spiral,2021,9
 147,The Unholy,2021,9
 148,Malignant,2021,9
-149,Resident Evil: Welcome to R…,2021,9
+149,Resident Evil,2021,9
 150,Antlers,2021,9
 151,The Night House,2021,9
 152,Separation,2021,9
@@ -156,7 +156,7 @@ movieId,name,year,genreId
 155,In the Earth,2021,9
 156,Come Play,2021,9
 157,Werewolves Within,2021,9
-158,Willy’s Wonderland,2021,9
+158,Willy's Wonderland,2021,9
 159,Freaky,2021,9
 160,Murder in the Woods,2021,9
 161,The Resort,2021,9
@@ -171,16 +171,16 @@ movieId,name,year,genreId
 170,Alien,2021,9
 171,Son,2021,9
 172,The Vigil,2021,9
-173,Death Rider in the House of…,2021,9
+173,Death Rider in the House of Vampires,2021,9
 174,Bloody Hell,2021,9
-175,Jakob’s Wife,2021,9
+175,Jakob's Wife,2021,9
 176,Halloween,2021,9
 177,We Need to Do Something,2021,9
 178,Hunter Hunter,2021,9
 179,The Scary of Sixty First,2021,9
 180,The Feast,2021,9
 181,The Boonies,2021,9
-182,Gôsuto masutâ,2021,9
+182,Gosuto masuta,2021,9
 183,Victim of Love,2021,9
 184,The Dark and The Wicked,2021,9
 185,Crack House of the Dead,2021,9
@@ -189,10 +189,10 @@ movieId,name,year,genreId
 188,Ghostbusters: Afterlife,2021,2
 189,Cruella,2021,2
 190,Space Jam: A New Legacy,2021,2
-191,The Hitman’s Wife’s Bodygua…,2021,2
+191,The Hitman's Wife's Bodyguard,2021,2
 192,The French Dispatch,2021,2
 193,Dazed and Confused,2021,2
-194,The House Next Door: Meet t…,2021,2
+194,The House Next Door: Meet the Blacks 2,2021,2
 195,Here Today,2021,2
 196,The War with Grandpa,2021,2
 197,Queen Bees,2021,2
@@ -206,15 +206,15 @@ movieId,name,year,genreId
 205,Bo Gia,2021,2
 206,Blithe Spirit,2021,2
 207,India Sweets and Spices,2021,2
-208,I’m Your Man,2021,2
-209,Délicieux,2021,2
+208,I'm Your Man,2021,2
+209,Delicieux,2021,2
 210,Once I Was Engaged,2021,2
 211,Together,2021,2
 212,Half Brothers,2021,2
 213,Shiva Baby,2021,2
 214,Walking with Herb,2021,2
 215,Tango Shalom,2021,2
-216,Retfærdighedens Ryttere,2021,2
+216,Riders of Justice,2021,2
 217,Christmas Vs The Walters,2021,2
 218,The Nowhere Inn,2021,2
 219,Last Call,2021,2
@@ -267,7 +267,7 @@ movieId,name,year,genreId
 266,John and the Hole,2021,10
 267,The Violent Heart,2021,10
 268,Final Frequency,2021,10
-269,Angelique’s Isle,2021,10
+269,Angelique's Isle,2021,10
 270,Dark State,2021,10
 271,Tomato Red,2021,10
 272,Blood Brothers,2021,10
@@ -291,7 +291,7 @@ movieId,name,year,genreId
 290,Gunda,2021,11
 291,The Loneliest Whale,2021,11
 292,On Broadway,2021,11
-293,In Balanchine’s Classroom,2021,11
+293,In Balanchine's Classroom,2021,11
 294,CatVideoFest,2021,11
 295,The First Wave,2021,11
 296,Truman & Tennessee,2021,11
@@ -300,7 +300,7 @@ movieId,name,year,genreId
 299,Some Kind of Heaven,2021,11
 300,"All Light, Everywhere",2021,11
 301,The Human Factor,2021,11
-302,Das geheime Leben der Bäume,2021,11
+302,Das geheime Leben der Baume,2021,11
 303,Ascension (???),2021,11
 304,No Ordinary Man,2021,11
 305,Bring Your Own Brigade,2021,11
