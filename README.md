@@ -40,73 +40,71 @@ In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) an
 
 ## Load nodes and relationship information from external CSV files and create entities
 
-### Load IP Addresses
+### Load Users, Ip Addresses and connect Users with IP Addresses
  ```sh
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/IPAddress.csv" AS row
-CREATE (i:IpAddress { ipAddressId: toInteger(row.ipAddressId), address: toString(row.address) });
-
-//Add constraints
-CREATE CONSTRAINT ip_address_id IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.ipAddressId IS UNIQUE;
-CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
-```
-
-### Load Users and create "USES" relationships with IP Addresses
- ```sh
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Users.csv" AS row
-CREATE (u:User { userId: toInteger(row.userId), firstName: row.firstName, lastName: row.lastName, gender: row.gender, email: row.email, phone: row.phone, state: row.state,  country: row.country })
-WITH u, row
-MATCH (i:IpAddress) WHERE i.ipAddressId = toInteger(row.ipAddressId)
-MERGE (u)-[uses:USES]->(i) RETURN u, uses, i;
-
-//Add constraints
+// Constraints
 CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
+CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
+ 
+// Data load
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Users.csv" AS row
+MERGE (u:User { userId: toInteger(row.userId) })
+ON CREATE SET 
+u.firstName= row.firstName,
+u.lastName= row.lastName,
+u.gender= row.gender,
+u.email= row.email,
+u.phone= row.phone,
+u.state= row.state,
+u.country= row.country
+WITH u, row
+MERGE (ip:IpAddress { address: row.ipAddress })
+MERGE (u)-[:USES]->(ip)
+RETURN u, ip
 ```
 
-### Load Genres
+### Load Movies, Genres and link them
  ```sh
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Genres.csv" AS row
-CREATE (g:Genre { name: toString(row.name), genreId: toInteger(row.genreId) });
-
-//Add constraints
+// Constraints
 CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
-CREATE CONSTRAINT genre_id IF NOT EXISTS FOR (g:Genre) REQUIRE g.genreId IS UNIQUE;
-```
-
-### Load Movies and link them with Genres using a relationship "HAS"
- ```sh
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Movies.csv" AS row
-CREATE (m:Movie { movieId: toInteger(row.movieId), name: toString(row.name), year: toInteger(row.year) })
-WITH m, row
-MATCH (g:Genre) WHERE g.genreId = toInteger(row.genreId)
-MERGE (g)<-[h:HAS]-(m) RETURN m, h, g;
-
-//Add constraints
 CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
 CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;
+
+//Load Data
+:auto USING PERIODIC COMMIT 500
+LOAD CSV WITH HEADERS FROM 
+"https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Movies.csv" AS row
+MERGE ( m:Movie { movieId: toInteger(row.movieId) })
+ON CREATE SET 
+m.name= row.name,
+m.year= toInteger(row.year)
+WITH m, row
+MERGE (g:Genre { name: row.genre } )
+MERGE (m)-[:HAS]->(g) RETURN m, g;
 ```
 
 ## Create connections (relationships) between entities
 
-### Load data and create "WATCHED" relationships between Users who have watched whatever Movies
+### Load Watch Events Relationships - Execute this after loading user and movies
  ```sh
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/WatchEvent.csv" AS row
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/WatchEvent.csv" AS row
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})  
-MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]->(m)
+MERGE (u)-[:WATCHED { watchCount: toInteger(row.watchCount) }]->(m)
+RETURN u, m;
 ```
 
 ## Perform basic querying on loaded data
 
-### Query users who have watched movie "The Boss Baby: Family Business"
-
 ```sh
-MATCH (u:User)-[w:WATCHED]->(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,w,m LIMIT 5
-Show users from "New York" and movies watched by them
+//Query users who have watched movie "The Boss Baby: Family Business"
+MATCH (u:User)-->(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,m LIMIT 5
 
-MATCH (u:User {state: "New York"} )-[w:WATCHED]->(m:Movie)  RETURN u,w,m LIMIT 50
-Show trending genres in Texas
+//Show users from "New York" and movies watched by them
+MATCH (u:User {state: "New York"} )-[:WATCHED]->(m)  RETURN u, m LIMIT 50
 
-MATCH (u:User {state: "Texas"} )-[w:WATCHED]->(m:Movie)-->(g:Genre)
+//Show trending genres in Texas
+MATCH (u:User {state: "Texas"} )-[:WATCHED]->(m)-[:HAS]->(g)
 return g.name, count(g) order by count(g) desc
 ```
 
@@ -139,7 +137,7 @@ RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, 
 Users who have similar last names and live in same state, and use same IP address, that means they are either same users with redundant profile or belong to the same family
 
 ```sh
-MATCH (a:User)-[:USES]->(:IpAddress)<-[:USES]-(b:User)
+MATCH (a:User)-->(:IpAddress)<--(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
 WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
 RETURN familyName, memberCount, members
@@ -147,18 +145,19 @@ RETURN familyName, memberCount, members
 
 ### Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node
 ```sh
-MATCH (a:User)-[:USES]->(:IpAddress)<-[:USES]-(b:User)
+MATCH (a:User)-->(:IpAddress)<--(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
 WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
 MERGE (a:Family {name: familyName})
 WITH a,familyMembers
 UNWIND  familyMembers as member
 MERGE (member)-[:BELONGS_TO]->(a)
+RETURN a, member
 ```
 
 ### Check how may families are created
 ```sh
-MATCH (f:Family)<-[:BELONGS_TO]-(u:User) RETURN f, u LIMIT 200
+MATCH (f:Family)<--(u:User) RETURN f, u LIMIT 200
 ```
 
 ## Generate recommendation based on user similarities / preferences
