@@ -170,65 +170,56 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
     <br/>
     <div>
       <div class="paragraph">
-<p>Load IP Addresses</p>
+<p>Load Users, Ip Addresses and connect Users with IP Addresses</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/IPAddress.csv" AS row
-CREATE (i:IpAddress { ipAddressId: toInteger(row.ipAddressId), address: toString(row.address) });
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
+CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
+CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
 
-//Add constraints
-CREATE CONSTRAINT ip_address_id IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.ipAddressId IS UNIQUE;
-CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;<!--/code--></pre>
-</div>
-</div>
-<br>
-<div class="paragraph">
-<p>Load Users and create "USES" relationships with IP Addresses</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Users.csv" AS row
-CREATE (u:User { userId: toInteger(row.userId), firstName: row.firstName, lastName: row.lastName, gender: row.gender, email: row.email, phone: row.phone, state: row.state,  country: row.country })
+// Data load
+LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Users.csv" AS row
+MERGE (u:User { userId: toInteger(row.userId) })
+ON CREATE SET
+u.firstName= row.firstName,
+u.lastName= row.lastName,
+u.gender= row.gender,
+u.email= row.email,
+u.phone= row.phone,
+u.state= row.state,
+u.country= row.country
 WITH u, row
-MATCH (i:IpAddress) WHERE i.ipAddressId = toInteger(row.ipAddressId)
-MERGE (u)-[uses:USES]-&gt;(i) RETURN u, uses, i;
-
-//Add constraints
-CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;<!--/code--></pre>
+MERGE (ip:IpAddress { address: row.ipAddress })
+MERGE (u)-[:USES]-&gt;(ip)
+RETURN u, ip<!--/code--></pre>
 </div>
 </div>
 <br>
 <div class="paragraph">
-<p>Load Genres</p>
+<p>Load Movies, Genres and link them</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Genres.csv" AS row
-CREATE (g:Genre { name: toString(row.name), genreId: toInteger(row.genreId) });
-
-//Add constraints
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
 CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
-CREATE CONSTRAINT genre_id IF NOT EXISTS FOR (g:Genre) REQUIRE g.genreId IS UNIQUE;<!--/code--></pre>
+CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
+CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;
+
+//Load Data
+:auto USING PERIODIC COMMIT 500
+LOAD CSV WITH HEADERS FROM
+"https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Movies.csv" AS row
+MERGE ( m:Movie { movieId: toInteger(row.movieId) })
+ON CREATE SET
+m.name= row.name,
+m.year= toInteger(row.year)
+WITH m, row
+MERGE (g:Genre { name: row.genre } )
+MERGE (m)-[:HAS]-&gt;(g) RETURN m, g;<!--/code--></pre>
 </div>
 </div>
 <br>
-<div class="paragraph">
-<p>Load Movies and link them with Genres using a relationship "HAS"</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/Movies.csv" AS row
-CREATE (m:Movie { movieId: toInteger(row.movieId), name: toString(row.name), year: toInteger(row.year) })
-WITH m, row
-MATCH (g:Genre) WHERE g.genreId = toInteger(row.genreId)
-MERGE (g)&lt;-[h:HAS]-(m) RETURN m, h, g;
-
-//Add constraints
-CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
-CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;<!--/code--></pre>
-</div>
-</div>
 <br>
 	</div>
   </div>
@@ -246,10 +237,11 @@ CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQU
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/53d75860661973eda6a6cb5d4a48f23b3d1e67cb/WatchEvent.csv" AS row
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/WatchEvent.csv" AS row
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})
-MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)<!--/code--></pre>
+MERGE (u)-[:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)
+RETURN u, m;<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -269,7 +261,7 @@ MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)<!--/code
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)-[w:WATCHED]-&gt;(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,w,m LIMIT 5<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)--&gt;(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,m LIMIT 5<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -278,7 +270,7 @@ MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)<!--/code
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[w:WATCHED]-&gt;(m:Movie)  RETURN u, w, m LIMIT 50<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[:WATCHED]-&gt;(m)  RETURN u, m LIMIT 50<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -287,7 +279,7 @@ MERGE (u)-[w:WATCHED { watchCount: toInteger(row.watchCount) }]-&gt;(m)<!--/code
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "Texas"} )-[w:WATCHED]-&gt;(m:Movie)--&gt;(g:Genre)
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "Texas"} )-[:WATCHED]-&gt;(m)-[:HAS]-&gt;(g)
 return g.name, count(g) order by count(g) desc<!--/code--></pre>
 </div>
 </div>
@@ -347,7 +339,7 @@ RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)-[:USES]-&gt;(:IpAddress)&lt;-[:USES]-(b:User)
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)--&gt;(:IpAddress)&lt;--(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
 WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
 RETURN familyName, memberCount, members<!--/code--></pre>
@@ -359,13 +351,14 @@ RETURN familyName, memberCount, members<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)-[:USES]-&gt;(:IpAddress)&lt;-[:USES]-(b:User)
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (a:User)--&gt;(:IpAddress)&lt;--(b:User)
 WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
 WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
 MERGE (a:Family {name: familyName})
 WITH a,familyMembers
 UNWIND  familyMembers as member
-MERGE (member)-[:BELONGS_TO]-&gt;(a)<!--/code--></pre>
+MERGE (member)-[:BELONGS_TO]-&gt;(a)
+RETURN a, member<!--/code--></pre>
 </div>
 </div>
 <br>
@@ -375,7 +368,7 @@ MERGE (member)-[:BELONGS_TO]-&gt;(a)<!--/code--></pre>
    <h4>Check how may families are created</h4>
    <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (f:Family)&lt;-[:BELONGS_TO]-(u:User) RETURN f, u LIMIT 200<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (f:Family)&lt;--(u:User) RETURN f, u LIMIT 200<!--/code--></pre>
 </div>
 </div>
 <br>
