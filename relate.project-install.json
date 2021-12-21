@@ -1,0 +1,11 @@
+{
+    "name": "entity-resolution",
+    "description":"Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j",
+    "dbms": [
+      {
+          "dumpFile": "data/entity_resolution-44.dump",
+          "targetNeo4jVersion":"4.4.*",
+          "plugins": ["apoc", "graph-data-science"]
+      }
+  ]
+}

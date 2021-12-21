@@ -1,9 +1,15 @@
 = Entity Resolution
+:name: entity-resolution
+:long-name: Entity Resolution Demonstration
 :author: Chintan Desai, Neo4j
 :twitter: neo4j
 :tags: Entity Resolution, Record Linkage, Recommendation, Graph Based Search, Node Similarity
-:neo4j-version: 4.4.0
-:experimental:
+:demodb: true
+:data: false
+:target-db-version: 4.1
+:bloom-perspective: bloom/Entity%20Resolution%20Perspective
+:guide: documentation/entity-resolution
+:model: main/documentation/img/model.PNG
 :icon: font
 :img: /img
 
