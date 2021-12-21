@@ -90,7 +90,7 @@ MERGE (m)-[:HAS]->(g) RETURN m, g;
 LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/WatchEvent.csv" AS row
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})  
-MERGE (u)-[w:WATCHED]->(m) ON CREATE SET w.watchCount = row.watchCount
+MERGE (u)-[w:WATCHED]->(m) ON CREATE SET w.watchCount = toInteger(row.watchCount)
 RETURN u, m;
 ```
 
