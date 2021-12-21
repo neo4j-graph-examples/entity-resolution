@@ -54,11 +54,8 @@ Users can have one or more accounts on a movie streaming platform.
 We are performing Entity Resolution over users’ data to identify similar/same users. We are also performing linking for users which are from same account (or group/family). Later, we are leveraging this linking to provide effective recommendations to individual users.
 
 ==== Data Model
-
-[subs=attributes]
-++++
-<img src="http:\\localhost\model.PNG" class="img-responsive">
-++++
+.Model
+image::{model}[]
 
 == Preparing the Graph: Loading data and creating Nodes and Relationships
 In this guide, we will perform below steps:
