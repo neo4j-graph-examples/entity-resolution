@@ -63,6 +63,8 @@ Load nodes and relationship information from external CSV files and create entit
 // Constraints
 CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
 CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
+
+// indexes
 CREATE INDEX user_state IF NOT EXISTS FOR (u:User) ON (u.state);
 CREATE INDEX user_firstName IF NOT EXISTS FOR (u:User) ON (u.firstName);
 CREATE INDEX user_lastName IF NOT EXISTS FOR (u:User) ON (u.firstName);
@@ -70,6 +72,7 @@ CREATE INDEX user_lastName IF NOT EXISTS FOR (u:User) ON (u.firstName);
 // Data load
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Users.csv" AS row
 
+// Conditionally create User, set properties on first create
 MERGE (u:User { userId: toInteger(row.userId) })
 ON CREATE SET 
 u.firstName= row.firstName,
@@ -79,8 +82,11 @@ u.email= row.email,
 u.phone= row.phone,
 u.state= row.state,
 u.country= row.country
+
 WITH u, row
+// create IpAddress if not exists
 MERGE (ip:IpAddress { address: row.ipAddress })
+// create unique relationship
 MERGE (u)-[:USES]->(ip);
 ----
 
@@ -91,18 +97,25 @@ MERGE (u)-[:USES]->(ip);
 // Constraints
 CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
 CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
-CREATE INDEX movie_name IF NOT EXISTS FOR (m:Movie) ON (m.name);
+// Index
+CREATE INDEX movie_title IF NOT EXISTS FOR (m:Movie) ON (m.title);
 
 //Load Data
 LOAD CSV WITH HEADERS FROM 
 "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Movies.csv" AS row
+
+// conditionally create movie and set properties on first creation
 MERGE ( m:Movie { movieId: toInteger(row.movieId) })
 ON CREATE SET 
-m.name= row.name,
-m.year= toInteger(row.year)
+m.title = row.name,
+m.year = toInteger(row.year)
+
 WITH m, row
+// create Genre if not exists
 MERGE (g:Genre { name: row.genre } )
-MERGE (m)-[:HAS]->(g) RETURN m, g;
+// create relationship if not exists
+MERGE (m)-[:HAS]->(g) 
+RETURN m, g;
 ----
 
 == Establish more connections (relationships) between entities
@@ -113,10 +126,14 @@ Load data and create "WATCHED" relationships between Users who have watched what
 ----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/WatchEvent.csv" AS row
 
+// find user and movie
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})  
 
-MERGE (u)-[w:WATCHED]->(m) ON CREATE SET w.watchCount = toInteger(row.watchCount);
+// create relationship if not exists
+MERGE (u)-[w:WATCHED]->(m)
+// always update watchCount
+SET w.watchCount = toInteger(row.watchCount);
 ----
 endif::[]
 
@@ -126,15 +143,15 @@ Query users who have watched movie "The Boss Baby: Family Business"
 
 [source,cypher]
 ----
-MATCH (u:User)-[:WATCHED]->(m:Movie {name: "The Boss Baby: Family Business"}) 
-RETURN u,m LIMIT 5
+MATCH (u:User)-[w:WATCHED]->(m:Movie {title: "The Boss Baby: Family Business"}) 
+RETURN u, w, m LIMIT 5
 ----
 
 Show users from "New York" and movies watched by them
 
 [source,cypher]
 ----
-MATCH (u:User {state: "New York"} )-[:WATCHED]->(m)  RETURN u, m LIMIT 50
+MATCH (u:User {state: "New York"} )-[w:WATCHED]->(m)  RETURN u, w, m LIMIT 50
 ----
 
 Show trending genres in Texas
@@ -142,15 +159,19 @@ Show trending genres in Texas
 [source,cypher]
 ----
 MATCH (u:User {state: "Texas"} )-[:WATCHED]->(m)-[:HAS]->(g:Genre)
-
+// group by genre, order by frequency
 RETURN g.name as genre, count(g) as freq
 ORDER BY freq DESC
 ----
 
 
 == Perform Entity Resolution based on similarity and perform record linkage
+
 === Users who have similar names
-These are users who have same/similar names but different (redundant) profiles due to typos or abbreviations used for some instances. We are using the Jaro Winkler Distance algorithm from the Neo4j APOC library.
+
+These are users who have same/similar names but different (redundant) profiles due to typos or abbreviations used for some instances. 
+
+We are using the Jaro Winkler Distance algorithm from the Neo4j APOC library.
 
 References
 
@@ -161,54 +182,110 @@ References
 ----
 MATCH (a:User)
 MATCH (b:User)
-WHERE a.firstName + a.lastName <> b.firstName + b.lastName
-WITH a, b, a.firstName + a.lastName AS norm1, b.firstName + b.lastName AS norm2
-WITH 
-toInteger(apoc.text.jaroWinklerDistance(norm1, norm2) * 100) AS nameSimilarity,
+// not the same user
+WHERE a <> b
+
+// users with full-names
+WITH a, b, a.firstName + ' ' + a.lastName AS name1, b.firstName + ' ' + b.lastName AS name2
+
+// compute different similiarities
+WITH *,
+toInteger(apoc.text.jaroWinklerDistance(name1, name2) * 100) AS nameSimilarity,
 toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
-toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity, a, b
-WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity WHERE similarity >= 90
-RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity
+toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity
+
+// compute a total similarity score 
+WITH a, b, name1, name2, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity 
+
+// filter
+WHERE similarity >= 90
+
+RETURN name1, name2, a.email, b.email,  similarity
+
+ORDER BY similarity DESC
 ----
 
 === Users belonging to same family
+
 Users who have similar last names and live in same state, and use same IP address, that means they are either same users with redundant profile or belong to the same family
+
 [source,cypher]
 ----
-MATCH (a:User)-->(:IpAddress)<--(b:User)
-WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
-WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
-RETURN familyName, memberCount, members
+// shared IP address
+MATCH (a:User)-->(ip:IpAddress)
+MATCH (ip)<--(b:User)
+// same lastname and state
+WHERE a.lastName = b.lastName 
+AND a.state = b.state AND a.country = b.country
+
+// group by joint attributes, collect all member-names
+WITH ip, a.country as country, a.state as state, 
+     a.lastName as familyName,
+    collect(distinct b.firstName + ' '  + b.lastName) as members, 
+    count(distinct b) as memberCount
+
+RETURN state, familyName, memberCount, members
+ORDER BY memberCount DESC
 ----
 
 Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node
+
 [source,cypher]
 ----
-MATCH (a:User)-->(:IpAddress)<--(b:User)
-WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
-WITH a.lastName as familyName, collect(distinct b) as familyMembers, count(distinct b) as totalMembers
-MERGE (a:Family {name: familyName})
-WITH a,familyMembers
-UNWIND  familyMembers as member
-MERGE (member)-[:BELONGS_TO]->(a)
-RETURN a, member
+// shared IP address
+MATCH (a:User)-->(ip:IpAddress)
+MATCH (ip)<--(b:User)
+// same lastname and state
+WHERE a.lastName = b.lastName 
+AND a.state = b.state AND a.country = b.country
+
+// group by joint attributes, collect all members
+WITH ip, a.country as country, a.state as state, 
+     a.lastName as familyName,
+     collect(distinct b) as familyMembers, 
+     count(distinct b) as totalMembers
+
+// not global but per attribute set, so no MERGE
+CREATE (f:Family {name: familyName})
+WITH f,familyMembers
+
+UNWIND familyMembers as member
+
+MERGE (member)-[r:BELONGS_TO]->(f)
+RETURN count(*);
 ----
 
 === Check how may families are created
 [source,cypher]
 ----
-MATCH (f:Family)<--(u:User) RETURN f, u LIMIT 200
+MATCH (f:Family)<-[b:BELONGS_TO]-(u:User) 
+
+RETURN f, b, u LIMIT 200
 ----
 
 == Generate recommendation based on user's family or group similarities / preferences
+
 Providing recommendation to the member based on his/her account/family members history. Get preferred genres by other account members and suggest top 5 movies from most watched genres.
+
 [source,cypher]
 ----
 MATCH (user:User {firstName: "Vilma", lastName: "De Mars"})
+// other family members
 MATCH (user)-[:BELONGS_TO]->(f)<-[:BELONGS_TO]-(otherMember)
+
+// what have they watched and transitive via genre
 MATCH (otherMember)-[:WATCHED]->(m1)-[:HAS]->(g:Genre)<-[:HAS]-(m2)
-WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
-RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50  
+
+// aggregate by genre, sort by watch count
+WITH g, count(*) as watched, m2
+ORDER BY watched DESC
+
+// count totals per genre, top-5 watched per genre
+WITH g, count(distinct m2) as totalMovies, collect(m2.title)[0..5] as movies
+
+// return 5 per genre
+RETURN g.name as genre, totalMovies, movies as topFiveMovies 
+ORDER BY totalMovies DESC LIMIT 10
 ----
 
 == Using Neo4j Node Similarity Algorigthm to find similar users and get recommendations
@@ -218,12 +295,15 @@ Find users based on their movie watching preferences using Node Similarity algor
 * https://neo4j.com/docs/graph-data-science/current/algorithms/node-similarity/[Node Similarity^]
 
 Step 1: For this, we will first create an in-memory graph with node and relationship specification to perform matching
+
 [source,cypher]
 ----
 CALL gds.graph.create(
     'similarityGraph',
+    // labels
     ['User', 'Movie'],
     {
+        // relationships
         WATCHED: {
             type: 'WATCHED',
             properties: {
@@ -238,6 +318,7 @@ CALL gds.graph.create(
 ----
 
 Step 2: Perform memory estimate for the matching to execute 
+
 [source,cypher]
 ----
 CALL gds.nodeSimilarity.write.estimate('similarityGraph', {
@@ -248,29 +329,45 @@ YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory
 ----
 
 Step 3: Execute algorithm and show results
+
 [source,cypher]
 ----
 CALL gds.nodeSimilarity.stream('similarityGraph')
+// return ids and similarity
 YIELD node1, node2, similarity
-WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
+// fetch nodes by id
+WITH gds.util.asNode(node1) AS person1, gds.util.asNode(node2) AS person2, similarity
+
 RETURN 
-Person1.firstName + ' ' +  Person1.lastName as p1,
-Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC
+person1.firstName + ' ' +  person1.lastName as p1,
+person2.firstName  + ' ' +   person2.lastName as p2, similarity 
+ORDER BY similarity DESC LIMIT 50
 ----
 
 Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences
+
 [source,cypher]
 ----
+MATCH (person1:User)
+WHERE person1.firstName = 'Paulie' AND person1.lastName = 'Imesson'
+
 CALL gds.nodeSimilarity.stream('similarityGraph')
 YIELD node1, node2, similarity
-WITH gds.util.asNode(node1) AS Person1, gds.util.asNode(node2) AS Person2, similarity
-WHERE Person1.firstName = 'Paulie' AND Person1.lastName = 'Imesson'
-MATCH (Person2)-[w:WATCHED]->(m) WHERE NOT exists((Person1)-->(m))
-WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
-RETURN movies order by watchCount
+// limit to our user
+WHERE node1 = id(person1)
+
+WITH person1, gds.util.asNode(node2) AS person2, similarity
+
+// what did the other people watch
+MATCH (person2)-[w:WATCHED]->(m) 
+// that our user hasn't seen
+WHERE NOT exists { (person1)-[:WATCHED]->(m) }
+
+RETURN m.title as movie, SUM(w.watchCount) as watchCount
+ORDER BY watchCount DESC LIMIT 10
 ----
 
-
+////
 == Using Pearson Similarity Algorigthm to find similar users based on Genre preference and get recommendations
 
 * https://neo4j.com/docs/graph-data-science/current/alpha-algorithms/pearson/[Peason Similarity - Neo4j GDS^]
@@ -279,6 +376,8 @@ RETURN movies order by watchCount
 
 Here we are finding the users who have similar Genre preferences as user Lanette Laughtisse. 
 We are comparing the similarities based on the movies they have watched from similar genre. We can use this information to provide recommendations.
+
+
 [source,cypher]
 ----
 MATCH (p1:User {firstName:"Lanette", lastName:"Laughtisse"} )-[:WATCHED]->(m:Movie)
@@ -321,23 +420,24 @@ MATCH (similarUser)-[w:WATCHED]->(m)
 WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
 RETURN movies order by watchCount
 ----
+////
 
 == Next steps
 
-=== Full Source Code Available on GIT
+=== Full Source Code Available on GitHub
 
 * https://github.com/neo4j-graph-examples/enitity_resolution[Source Code with Cypher and data dumps^]
 
-
+* https://github.com/neo4j-graph-examples/[Other Example Datasets^]
 
 === More code
 
 * pass:a[<a play-topic="movie-graph">Movie Graph</a> - actors & movies]
 * pass:a[<a play-topic="cypher">Cypher</a> - query language fundamentals]
 
-
-
 === References
+
+* https://graphacademy.neo4j.com[GraphAcademy^]
 * https://neo4j.com/developer/[Developer resources^]
 * https://neo4j.com/docs/cypher-manual[Neo4j Cypher Manual^]
-* https://neo4j.com/developer-blog/exploring-supervised-entity-resolution-in-neo4j/[Entity Resolution in Neo4j reference^]
+* https://neo4j.com/developer-blog/exploring-supervised-entity-resolution-in-neo4j/[Entity Resolution in Neo4j Article^]
