@@ -6,6 +6,11 @@
           "dumpFile": "data/entity_resolution-44.dump",
           "targetNeo4jVersion":"4.4.*",
           "plugins": ["apoc", "graph-data-science"]
+      },
+	  {
+          "dumpFile": "data/entity-resolution-43.dump",
+          "targetNeo4jVersion":"4.3.*",
+          "plugins": ["apoc", "graph-data-science"]
       }
   ]
 }
