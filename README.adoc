@@ -8,7 +8,7 @@
 :demodb: false
 :data: true
 :use-load-script: false
-:use-dump-file: data/entity-resolution-44.dump
+:use-dump-file: blob/main/data/entity-resolution-44.dump
 :zip-file: false
 :use-plugin: apoc, graph-data-science
 :target-db-version: 4.4
