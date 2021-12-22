@@ -14,7 +14,7 @@
 :target-db-version: 4.4
 :bloom-perspective: bloom/Entity%20Resolution%20Perspective.json
 :guide: documentation/entity-resolution.adoc
-:model: documentation/img/model.png
+:model: documentation/img/model.PNG
 :example: documentation/img/example.png
 :rendered-guide: https://guides.neo4j.com/sandbox/{name}/index.html
 :nodes: 1267
