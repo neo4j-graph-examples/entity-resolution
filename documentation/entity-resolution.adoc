@@ -1,23 +1,10 @@
 = Entity Resolution
-:name: entity-resolution
-:long-name: Entity Resolution Demonstration
-:author: Chintan Desai, Neo4j
-:twitter: neo4j
-:tags: Entity Resolution, Record Linkage, Recommendation, Graph Based Search, Node Similarity
-:demodb: true
-:data: false
-:target-db-version: 4.1
-:bloom-perspective: bloom/Entity%20Resolution%20Perspective
-:guide: documentation/entity-resolution
-:model: main/documentation/img/model.PNG
-:icon: font
-:img: /img
+:img: img
 
 == Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j
+
 === What is Entity Resolution?
-++++
-<br>
-++++
+
 Entity Resolution (ER) is the process of disambiguating data to determine if multiple digital records represent the same real-world entity such as a person, organization, place, or other type of object. 
 
 For example, say you have information on persons coming from different e-commerce platforms, or say same users with different profiles in a system.
@@ -29,6 +16,7 @@ A human may be able to tell if the records actually belong to the same underlyin
 There can be numerous use cases for Entity Resolution across industries like patient history linkage in Healthcare, customers' preferences and history in Insurance and Financial Services, identifying  similar entities or groups for recommendation in E-commerce and Digital Marketing etc.
 
 == Demo Use Case
+
 This demo guide covers a similar use case of performing Entity Resolution.
 
 We have taken an example of a dummy online movie streaming platform. For ease of understanding, we have taken only movies and users datasets.
@@ -37,25 +25,25 @@ Users can have one or more accounts on a movie streaming platform.
 
 We are performing Entity Resolution over users’ data to identify similar/same users. We are also performing linking for users which are from same account (or group/family). Later, we are leveraging this linking to provide effective recommendations to individual users.
 
-==== Data Model
+=== Data Model
 
-[subs=attributes]
-++++
-<img src="http:\\localhost\model.PNG" class="img-responsive">
-++++
+image::{img}/model.png[]
 
-== Preparing the Graph: Loading data and creating Nodes and Relationships
+== Steps in this Guide
+
 In this guide, we will perform below steps:
 
+ifndef::env-guide[]
 * Load: Load nodes and relationship information from external CSV files and create entities
 * Relate: Establish more connections (relationships) between entities
-* Test: Perform basic querying with Cypher on loaded data
+endif::[]
+* Explore: Perform basic querying with Cypher on loaded data
 * ER: Perform Entity Resolution based on similarity and do record linkage
 * Recommend: Generate recommendation based on user similarities / preferences
 * Additional: Try couple of preference based similarities and recommendation examples
 
-
 === Notes
+
 In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) and Neo4j GDS (Graph Data Science) libraries few Cypher queries.
 To execute the Cypher queries with APOC or GDS functions, you will need to add these libraries as plugins to your Neo4j database instance.
 
@@ -64,16 +52,24 @@ For more details on APOC and GDS, please refer below links.
 * https://neo4j.com/developer/neo4j-apoc/[APOC^]
 * https://neo4j.com/docs/graph-data-science/current/[GDS^]
 
-== Load nodes and relationship information from external CSV files and create entities
-Load Users, Ip Addresses and connect Users with IP Addresses
+
+ifndef::env-guide[]
+== Load Users, Ip Addresses and connect Users with IP Addresses
+
+Load nodes and relationship information from external CSV files and create entities
+
 [source,cypher]
 ----
 // Constraints
 CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
 CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
+CREATE INDEX user_state IF NOT EXISTS FOR (u:User) ON (u.state);
+CREATE INDEX user_firstName IF NOT EXISTS FOR (u:User) ON (u.firstName);
+CREATE INDEX user_lastName IF NOT EXISTS FOR (u:User) ON (u.firstName);
 
 // Data load
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Users.csv" AS row
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Users.csv" AS row
+
 MERGE (u:User { userId: toInteger(row.userId) })
 ON CREATE SET 
 u.firstName= row.firstName,
@@ -85,24 +81,21 @@ u.state= row.state,
 u.country= row.country
 WITH u, row
 MERGE (ip:IpAddress { address: row.ipAddress })
-MERGE (u)-[:USES]->(ip)
-RETURN u, ip
+MERGE (u)-[:USES]->(ip);
 ----
-++++
-<br>
-++++
-Load Movies, Genres and link them
+
+== Load Movies, Genres and link them
+
 [source,cypher]
 ----
 // Constraints
 CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
 CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
-CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;
+CREATE INDEX movie_name IF NOT EXISTS FOR (m:Movie) ON (m.name);
 
 //Load Data
-:auto USING PERIODIC COMMIT 500
 LOAD CSV WITH HEADERS FROM 
-"https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Movies.csv" AS row
+"https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Movies.csv" AS row
 MERGE ( m:Movie { movieId: toInteger(row.movieId) })
 ON CREATE SET 
 m.name= row.name,
@@ -111,51 +104,49 @@ WITH m, row
 MERGE (g:Genre { name: row.genre } )
 MERGE (m)-[:HAS]->(g) RETURN m, g;
 ----
-++++
-<br>
-++++
-++++
-<br>
-++++
+
 == Establish more connections (relationships) between entities
+
 Load data and create "WATCHED" relationships between Users who have watched whatever Movies
+
 [source,cypher]
 ----
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/WatchEvent.csv" AS row
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/WatchEvent.csv" AS row
+
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})  
-MERGE (u)-[w:WATCHED]->(m) ON CREATE SET w.watchCount = toInteger(row.watchCount)
-RETURN u, m;
+
+MERGE (u)-[w:WATCHED]->(m) ON CREATE SET w.watchCount = toInteger(row.watchCount);
 ----
-++++
-<br>
-++++
+endif::[]
+
 == Perform basic querying with Cypher on loaded data
+
 Query users who have watched movie "The Boss Baby: Family Business"
+
 [source,cypher]
 ----
-MATCH (u:User)-->(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,m LIMIT 5
+MATCH (u:User)-[:WATCHED]->(m:Movie {name: "The Boss Baby: Family Business"}) 
+RETURN u,m LIMIT 5
 ----
-++++
-<br>
-++++
+
 Show users from "New York" and movies watched by them
+
 [source,cypher]
 ----
 MATCH (u:User {state: "New York"} )-[:WATCHED]->(m)  RETURN u, m LIMIT 50
 ----
-++++
-<br>
-++++
+
 Show trending genres in Texas
+
 [source,cypher]
 ----
-MATCH (u:User {state: "Texas"} )-[:WATCHED]->(m)-[:HAS]->(g)
-return g.name, count(g) order by count(g) desc
+MATCH (u:User {state: "Texas"} )-[:WATCHED]->(m)-[:HAS]->(g:Genre)
+
+RETURN g.name as genre, count(g) as freq
+ORDER BY freq DESC
 ----
-++++
-<br>
-++++
+
 
 == Perform Entity Resolution based on similarity and perform record linkage
 === Users who have similar names
@@ -179,9 +170,7 @@ toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilar
 WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity WHERE similarity >= 90
 RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity
 ----
-++++
-<br>
-++++
+
 === Users belonging to same family
 Users who have similar last names and live in same state, and use same IP address, that means they are either same users with redundant profile or belong to the same family
 [source,cypher]
@@ -191,9 +180,7 @@ WHERE a.lastName =  b.lastName AND a.state = b.state AND a.country = b.country
 WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName) as members, count(distinct b) as memberCount
 RETURN familyName, memberCount, members
 ----
-++++
-<br>
-++++
+
 Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node
 [source,cypher]
 ----
@@ -206,17 +193,13 @@ UNWIND  familyMembers as member
 MERGE (member)-[:BELONGS_TO]->(a)
 RETURN a, member
 ----
-++++
-<br>
-++++
+
 === Check how may families are created
 [source,cypher]
 ----
 MATCH (f:Family)<--(u:User) RETURN f, u LIMIT 200
 ----
-++++
-<br>
-++++
+
 == Generate recommendation based on user's family or group similarities / preferences
 Providing recommendation to the member based on his/her account/family members history. Get preferred genres by other account members and suggest top 5 movies from most watched genres.
 [source,cypher]
@@ -227,9 +210,7 @@ MATCH (otherMember)-[:WATCHED]->(m1)-[:HAS]->(g:Genre)<-[:HAS]-(m2)
 WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as movies
 RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50  
 ----
-++++
-<br>
-++++
+
 == Using Neo4j Node Similarity Algorigthm to find similar users and get recommendations
 
 Find users based on their movie watching preferences using Node Similarity algorithm
@@ -255,9 +236,7 @@ CALL gds.graph.create(
     }
 );
 ----
-++++
-<br>
-++++
+
 Step 2: Perform memory estimate for the matching to execute 
 [source,cypher]
 ----
@@ -267,9 +246,7 @@ CALL gds.nodeSimilarity.write.estimate('similarityGraph', {
 })
 YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory
 ----
-++++
-<br>
-++++
+
 Step 3: Execute algorithm and show results
 [source,cypher]
 ----
@@ -280,9 +257,7 @@ RETURN
 Person1.firstName + ' ' +  Person1.lastName as p1,
 Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC
 ----
-++++
-<br>
-++++
+
 Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences
 [source,cypher]
 ----
@@ -294,9 +269,7 @@ MATCH (Person2)-[w:WATCHED]->(m) WHERE NOT exists((Person1)-->(m))
 WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
 RETURN movies order by watchCount
 ----
-++++
-<br>
-++++
+
 
 == Using Pearson Similarity Algorigthm to find similar users based on Genre preference and get recommendations
 
@@ -326,9 +299,7 @@ RETURN currentUser,similarUser, similarity
        ORDER BY similarity DESC
 LIMIT 100
 ----
-++++
-<br>
-++++
+
 Get recommendations for a user using similar order users' preferenes by fetching similar users using Pearson Similarity function
 [source,cypher]
 ----
@@ -357,18 +328,14 @@ RETURN movies order by watchCount
 
 * https://github.com/neo4j-graph-examples/enitity_resolution[Source Code with Cypher and data dumps^]
 
-++++
-<br>
-++++
+
 
 === More code
 
 * pass:a[<a play-topic="movie-graph">Movie Graph</a> - actors & movies]
 * pass:a[<a play-topic="cypher">Cypher</a> - query language fundamentals]
 
-++++
-<br>
-++++
+
 
 === References
 * https://neo4j.com/developer/[Developer resources^]

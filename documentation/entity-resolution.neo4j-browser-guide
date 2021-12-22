@@ -57,8 +57,7 @@
 
 
    <h4>What is Entity Resolution?</h4>
-   <br>
-<div class="paragraph">
+   <div class="paragraph">
 <p>Entity Resolution (ER) is the process of disambiguating data to determine if multiple digital records represent the same real-world entity such as a person, organization, place, or other type of object.</p>
 </div>
 <div class="paragraph">
@@ -100,7 +99,11 @@
 
 
    <h4>Data Model</h4>
-   <img src="http:\\localhost\model.PNG" class="img-responsive">
+   <div class="imageblock">
+<div class="content">
+<img src="http://guides.neo4j.com/sandbox/entity-resolution/img/model.png" alt="model">
+</div>
+</div>
 	</div>
   </div>
 </slide>
@@ -109,7 +112,7 @@
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Preparing the Graph: Loading data and creating Nodes and Relationships</h3>
+    <h3>Steps in this Guide</h3>
     <br/>
     <div>
       <div class="paragraph">
@@ -124,7 +127,7 @@
 <p>Relate: Establish more connections (relationships) between entities</p>
 </li>
 <li>
-<p>Test: Perform basic querying with Cypher on loaded data</p>
+<p>Explore: Perform basic querying with Cypher on loaded data</p>
 </li>
 <li>
 <p>ER: Perform Entity Resolution based on similarity and do record linkage</p>
@@ -166,20 +169,24 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Load nodes and relationship information from external CSV files and create entities</h3>
+    <h3>Load Users, Ip Addresses and connect Users with IP Addresses</h3>
     <br/>
     <div>
       <div class="paragraph">
-<p>Load Users, Ip Addresses and connect Users with IP Addresses</p>
+<p>Load nodes and relationship information from external CSV files and create entities</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
 CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
 CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
+CREATE INDEX user_state IF NOT EXISTS FOR (u:User) ON (u.state);
+CREATE INDEX user_firstName IF NOT EXISTS FOR (u:User) ON (u.firstName);
+CREATE INDEX user_lastName IF NOT EXISTS FOR (u:User) ON (u.firstName);
 
 // Data load
-LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Users.csv" AS row
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Users.csv" AS row
+
 MERGE (u:User { userId: toInteger(row.userId) })
 ON CREATE SET
 u.firstName= row.firstName,
@@ -191,25 +198,30 @@ u.state= row.state,
 u.country= row.country
 WITH u, row
 MERGE (ip:IpAddress { address: row.ipAddress })
-MERGE (u)-[:USES]-&gt;(ip)
-RETURN u, ip<!--/code--></pre>
+MERGE (u)-[:USES]-&gt;(ip);<!--/code--></pre>
 </div>
 </div>
-<br>
-<div class="paragraph">
-<p>Load Movies, Genres and link them</p>
-</div>
-<div class="listingblock">
+	</div>
+  </div>
+</slide>
+
+
+
+<slide class="row-fluid">
+  <div class="col-sm-12">
+    <h3>Load Movies, Genres and link them</h3>
+    <br/>
+    <div>
+      <div class="listingblock">
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
 CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
 CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
-CREATE CONSTRAINT movie_name IF NOT EXISTS FOR (m:Movie) REQUIRE m.name IS UNIQUE;
+CREATE INDEX movie_name IF NOT EXISTS FOR (m:Movie) ON (m.name);
 
 //Load Data
-:auto USING PERIODIC COMMIT 500
 LOAD CSV WITH HEADERS FROM
-"https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/Movies.csv" AS row
+"https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Movies.csv" AS row
 MERGE ( m:Movie { movieId: toInteger(row.movieId) })
 ON CREATE SET
 m.name= row.name,
@@ -219,8 +231,6 @@ MERGE (g:Genre { name: row.genre } )
 MERGE (m)-[:HAS]-&gt;(g) RETURN m, g;<!--/code--></pre>
 </div>
 </div>
-<br>
-<br>
 	</div>
   </div>
 </slide>
@@ -237,14 +247,14 @@ MERGE (m)-[:HAS]-&gt;(g) RETURN m, g;<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://gist.githubusercontent.com/chintan196/6b33019341bdcb6ed4d712cc94b84fc6/raw/2513454dd72b70d3122fd0a15777fc9842bbba89/WatchEvent.csv" AS row
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/WatchEvent.csv" AS row
+
 MATCH (u:User {userId: toInteger(row.userId)})
 MATCH (m:Movie {movieId: toInteger(row.movieId)})
-MERGE (u)-[w:WATCHED]-&gt;(m) ON CREATE SET w.watchCount = toInteger(row.watchCount)
-RETURN u, m;<!--/code--></pre>
+
+MERGE (u)-[w:WATCHED]-&gt;(m) ON CREATE SET w.watchCount = toInteger(row.watchCount);<!--/code--></pre>
 </div>
 </div>
-<br>
 	</div>
   </div>
 </slide>
@@ -261,10 +271,10 @@ RETURN u, m;<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)--&gt;(m:Movie {name: "The Boss Baby: Family Business"}) RETURN u,m LIMIT 5<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User)-[:WATCHED]-&gt;(m:Movie {name: "The Boss Baby: Family Business"})
+RETURN u,m LIMIT 5<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Show users from "New York" and movies watched by them</p>
 </div>
@@ -273,17 +283,17 @@ RETURN u, m;<!--/code--></pre>
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "New York"} )-[:WATCHED]-&gt;(m)  RETURN u, m LIMIT 50<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Show trending genres in Texas</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "Texas"} )-[:WATCHED]-&gt;(m)-[:HAS]-&gt;(g)
-return g.name, count(g) order by count(g) desc<!--/code--></pre>
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (u:User {state: "Texas"} )-[:WATCHED]-&gt;(m)-[:HAS]-&gt;(g:Genre)
+
+RETURN g.name as genre, count(g) as freq
+ORDER BY freq DESC<!--/code--></pre>
 </div>
 </div>
-<br>
 	</div>
   </div>
 </slide>
@@ -329,7 +339,6 @@ WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as 
 RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity<!--/code--></pre>
 </div>
 </div>
-<br>
 
 
 
@@ -345,7 +354,6 @@ WITH a.lastName as familyName, collect(distinct b.firstName + ' '  + b.lastName)
 RETURN familyName, memberCount, members<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Record Linkage: Create Family Nodes for each family and connect members. This is how we link the similar users and family members using a common Family node</p>
 </div>
@@ -361,7 +369,6 @@ MERGE (member)-[:BELONGS_TO]-&gt;(a)
 RETURN a, member<!--/code--></pre>
 </div>
 </div>
-<br>
 
 
 
@@ -371,7 +378,6 @@ RETURN a, member<!--/code--></pre>
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->MATCH (f:Family)&lt;--(u:User) RETURN f, u LIMIT 200<!--/code--></pre>
 </div>
 </div>
-<br>
 	</div>
   </div>
 </slide>
@@ -395,7 +401,6 @@ WITH g.name as genre, count(distinct m2) as totalMovies, collect(m2.name) as mov
 RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DESC LIMIT 50<!--/code--></pre>
 </div>
 </div>
-<br>
 	</div>
   </div>
 </slide>
@@ -439,7 +444,6 @@ RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DE
 );<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Step 2: Perform memory estimate for the matching to execute</p>
 </div>
@@ -452,7 +456,6 @@ RETURN genre, totalMovies, movies[0..5] as topFiveMovies ORDER BY totalMovies DE
 YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Step 3: Execute algorithm and show results</p>
 </div>
@@ -466,7 +469,6 @@ Person1.firstName + ' ' +  Person1.lastName as p1,
 Person2.firstName  + ' ' +   Person2.lastName as p2, similarity ORDER BY similarity DESC<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences</p>
 </div>
@@ -481,7 +483,6 @@ WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
 RETURN movies order by watchCount<!--/code--></pre>
 </div>
 </div>
-<br>
 	</div>
   </div>
 </slide>
@@ -528,7 +529,6 @@ RETURN currentUser,similarUser, similarity
 LIMIT 100<!--/code--></pre>
 </div>
 </div>
-<br>
 <div class="paragraph">
 <p>Get recommendations for a user using similar order users' preferenes by fetching similar users using Pearson Similarity function</p>
 </div>
@@ -575,7 +575,6 @@ RETURN movies order by watchCount<!--/code--></pre>
 </li>
 </ul>
 </div>
-<br>
 
 
 
@@ -590,7 +589,6 @@ RETURN movies order by watchCount<!--/code--></pre>
 </li>
 </ul>
 </div>
-<br>
 
 
 
