@@ -8,7 +8,7 @@
 :demodb: false
 :data: true
 :use-load-script: false
-:use-dump-file: blob/main/data/entity-resolution-44.dump
+:use-dump-file: data/entity-resolution-44.dump
 :zip-file: false
 :use-plugin: apoc, graph-data-science
 :target-db-version: 4.4
@@ -68,7 +68,7 @@ Import flat files (csv, json, etc) using Cypher's https://neo4j.com/docs/cypher-
 endif::[]
 
 ifeval::[{use-dump-file} != false]
-==== Dump file: `{use-dump-file}`
+==== Dump file: `link:{use-dump-file}[]`
 
 * Drop the file into the `Files` section of a project in Neo4j Desktop. Then choose the option to `Create new DBMS from dump` option from the file options.
 
