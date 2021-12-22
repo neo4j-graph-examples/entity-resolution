@@ -212,8 +212,7 @@ Users who have similar last names and live in same state, and use same IP addres
 [source,cypher]
 ----
 // shared IP address
-MATCH (a:User)-->(ip:IpAddress)
-MATCH (ip)<--(b:User)
+MATCH (a:User)-->(ip:IpAddress)<--(b:User)
 // same lastname and state
 WHERE a.lastName = b.lastName 
 AND a.state = b.state AND a.country = b.country
@@ -233,8 +232,7 @@ Record Linkage: Create Family Nodes for each family and connect members. This is
 [source,cypher]
 ----
 // shared IP address
-MATCH (a:User)-->(ip:IpAddress)
-MATCH (ip)<--(b:User)
+MATCH (a:User)-->(ip:IpAddress)<--(b:User)
 // same lastname and state
 WHERE a.lastName = b.lastName 
 AND a.state = b.state AND a.country = b.country
@@ -244,12 +242,12 @@ WITH ip, a.country as country, a.state as state,
      a.lastName as familyName,
      collect(distinct b) as familyMembers, 
      count(distinct b) as totalMembers
+WITH familyName, head(familyMembers) as first, tail(familyMembers) as rest
+// not global family but within first member
+MERGE (first)-[:BELONGS_TO]->(f:Family {name: familyName})
+WITH f,rest
 
-// not global but per attribute set, so no MERGE
-CREATE (f:Family {name: familyName})
-WITH f,familyMembers
-
-UNWIND familyMembers as member
+UNWIND rest as member
 
 MERGE (member)-[r:BELONGS_TO]->(f)
 RETURN count(*);

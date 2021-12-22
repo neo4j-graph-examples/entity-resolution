@@ -382,8 +382,7 @@ ORDER BY similarity DESC<!--/code--></pre>
 <div class="listingblock">
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// shared IP address
-MATCH (a:User)--&gt;(ip:IpAddress)
-MATCH (ip)&lt;--(b:User)
+MATCH (a:User)--&gt;(ip:IpAddress)&lt;--(b:User)
 // same lastname and state
 WHERE a.lastName = b.lastName
 AND a.state = b.state AND a.country = b.country
@@ -404,8 +403,7 @@ ORDER BY memberCount DESC<!--/code--></pre>
 <div class="listingblock">
 <div class="content">
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// shared IP address
-MATCH (a:User)--&gt;(ip:IpAddress)
-MATCH (ip)&lt;--(b:User)
+MATCH (a:User)--&gt;(ip:IpAddress)&lt;--(b:User)
 // same lastname and state
 WHERE a.lastName = b.lastName
 AND a.state = b.state AND a.country = b.country
@@ -415,12 +413,12 @@ WITH ip, a.country as country, a.state as state,
      a.lastName as familyName,
      collect(distinct b) as familyMembers,
      count(distinct b) as totalMembers
+WITH familyName, head(familyMembers) as first, tail(familyMembers) as rest
+// not global family but within first member
+MERGE (first)-[:BELONGS_TO]-&gt;(f:Family {name: familyName})
+WITH f,rest
 
-// not global but per attribute set, so no MERGE
-CREATE (f:Family {name: familyName})
-WITH f,familyMembers
-
-UNWIND familyMembers as member
+UNWIND rest as member
 
 MERGE (member)-[r:BELONGS_TO]-&gt;(f)
 RETURN count(*);<!--/code--></pre>
