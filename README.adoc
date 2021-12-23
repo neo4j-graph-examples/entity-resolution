@@ -99,6 +99,7 @@ ifeval::[{zip-file} != false]
 Download the zip file link:{repo}/raw/master/{name}.zip[{name}.zip] and add it as "project from file" to https://neo4j.com/developer/neo4j-desktop[Neo4j Desktop^].
 endif::[]
 
+////
 === Code Examples
 
 * link:code/javascript/example.js[JavaScript]
@@ -106,6 +107,7 @@ endif::[]
 * link:code/csharp/Example.cs[C#]
 * link:code/python/example.py[Python]
 * link:code/go/example.go[Go]
+\\\\
 
 ////
 == Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j
