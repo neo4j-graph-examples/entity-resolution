@@ -99,6 +99,10 @@ ifeval::[{zip-file} != false]
 Download the zip file link:{repo}/raw/master/{name}.zip[{name}.zip] and add it as "project from file" to https://neo4j.com/developer/neo4j-desktop[Neo4j Desktop^].
 endif::[]
 
+=== Feedback
+
+Feel free to submit issues or pull requests for improvement on this repository.
+
 ////
 === Code Examples
 
