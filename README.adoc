@@ -107,9 +107,7 @@ endif::[]
 * link:code/csharp/Example.cs[C#]
 * link:code/python/example.py[Python]
 * link:code/go/example.go[Go]
-\\\\
 
-////
 == Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j
 
 === What is Entity Resolution?
