@@ -1,4 +1,3 @@
-= Entity Resolution
 :name: entity-resolution
 :long-name: Entity-Resolution-Demonstration
 :description: Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j
