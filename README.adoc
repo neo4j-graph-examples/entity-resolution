@@ -3,7 +3,6 @@
 :long-name: Entity-Resolution-Demonstration
 :description: Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j
 :icon: documentation/img/entity-resolution-icon.svg
-:icon: font
 :tags: Entity Resolution, Record Linkage, Recommendation, Graph Based Search, Node Similarity
 :author: Chintan Desai, Neo4j
 :demodb: false
