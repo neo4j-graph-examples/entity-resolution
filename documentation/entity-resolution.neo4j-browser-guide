@@ -101,7 +101,7 @@
    <h4>Data Model</h4>
    <div class="imageblock">
 <div class="content">
-<img src="http://guides.neo4j.com/sandbox/entity-resolution/img/model.png" alt="model">
+<img src="https://guides.neo4j.com/sandbox/entity-resolution/img/model.png" alt="model">
 </div>
 </div>
 	</div>
@@ -120,12 +120,6 @@
 </div>
 <div class="ulist">
 <ul>
-<li>
-<p>Load: Load nodes and relationship information from external CSV files and create entities</p>
-</li>
-<li>
-<p>Relate: Establish more connections (relationships) between entities</p>
-</li>
 <li>
 <p>Explore: Perform basic querying with Cypher on loaded data</p>
 </li>
@@ -160,117 +154,6 @@ To execute the Cypher queries with APOC or GDS functions, you will need to add t
 <p><a href="https://neo4j.com/docs/graph-data-science/current/" target="_blank">GDS</a></p>
 </li>
 </ul>
-</div>
-	</div>
-  </div>
-</slide>
-
-
-
-<slide class="row-fluid">
-  <div class="col-sm-12">
-    <h3>Load Users, Ip Addresses and connect Users with IP Addresses</h3>
-    <br/>
-    <div>
-      <div class="paragraph">
-<p>Load nodes and relationship information from external CSV files and create entities</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
-CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.userId IS UNIQUE;
-CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IpAddress) REQUIRE i.address IS UNIQUE;
-
-// indexes
-CREATE INDEX user_state IF NOT EXISTS FOR (u:User) ON (u.state);
-CREATE INDEX user_firstName IF NOT EXISTS FOR (u:User) ON (u.firstName);
-CREATE INDEX user_lastName IF NOT EXISTS FOR (u:User) ON (u.firstName);
-
-// Data load
-LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Users.csv" AS row
-
-// Conditionally create User, set properties on first create
-MERGE (u:User { userId: toInteger(row.userId) })
-ON CREATE SET
-u.firstName= row.firstName,
-u.lastName= row.lastName,
-u.gender= row.gender,
-u.email= row.email,
-u.phone= row.phone,
-u.state= row.state,
-u.country= row.country
-
-WITH u, row
-// create IpAddress if not exists
-MERGE (ip:IpAddress { address: row.ipAddress })
-// create unique relationship
-MERGE (u)-[:USES]-&gt;(ip);<!--/code--></pre>
-</div>
-</div>
-	</div>
-  </div>
-</slide>
-
-
-
-<slide class="row-fluid">
-  <div class="col-sm-12">
-    <h3>Load Movies, Genres and link them</h3>
-    <br/>
-    <div>
-      <div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->// Constraints
-CREATE CONSTRAINT genre_name IF NOT EXISTS FOR (g:Genre) REQUIRE g.name IS UNIQUE;
-CREATE CONSTRAINT movie_id IF NOT EXISTS FOR (m:Movie) REQUIRE m.movieId IS UNIQUE;
-// Index
-CREATE INDEX movie_title IF NOT EXISTS FOR (m:Movie) ON (m.title);
-
-//Load Data
-LOAD CSV WITH HEADERS FROM
-"https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/Movies.csv" AS row
-
-// conditionally create movie and set properties on first creation
-MERGE ( m:Movie { movieId: toInteger(row.movieId) })
-ON CREATE SET
-m.title = row.name,
-m.year = toInteger(row.year)
-
-WITH m, row
-// create Genre if not exists
-MERGE (g:Genre { name: row.genre } )
-// create relationship if not exists
-MERGE (m)-[:HAS]-&gt;(g)
-RETURN m, g;<!--/code--></pre>
-</div>
-</div>
-	</div>
-  </div>
-</slide>
-
-
-
-<slide class="row-fluid">
-  <div class="col-sm-12">
-    <h3>Establish more connections (relationships) between entities</h3>
-    <br/>
-    <div>
-      <div class="paragraph">
-<p>Load data and create "WATCHED" relationships between Users who have watched whatever Movies</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/neo4j-graph-examples/entity_resolution/main/data/csv/WatchEvent.csv" AS row
-
-// find user and movie
-MATCH (u:User {userId: toInteger(row.userId)})
-MATCH (m:Movie {movieId: toInteger(row.movieId)})
-
-// create relationship if not exists
-MERGE (u)-[w:WATCHED]-&gt;(m)
-// always update watchCount
-SET w.watchCount = toInteger(row.watchCount);<!--/code--></pre>
-</div>
 </div>
 	</div>
   </div>
@@ -443,7 +326,7 @@ RETURN f, b, u LIMIT 200<!--/code--></pre>
 
 <slide class="row-fluid">
   <div class="col-sm-12">
-    <h3>Generate recommendation based on user&#8217;s family or group similarities / preferences</h3>
+    <h3>Generate recommendation based on user family or group similarities / preferences</h3>
     <br/>
     <div>
       <div class="paragraph">
@@ -496,7 +379,7 @@ ORDER BY totalMovies DESC LIMIT 10<!--/code--></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.graph.create(
+<pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.graph.project(
     'similarityGraph',
     // labels
     ['User', 'Movie'],
@@ -535,13 +418,12 @@ YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory<!--/code-
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.nodeSimilarity.stream('similarityGraph')
 // return ids and similarity
 YIELD node1, node2, similarity
+ORDER BY similarity DESC LIMIT 50
 // fetch nodes by id
 WITH gds.util.asNode(node1) AS person1, gds.util.asNode(node2) AS person2, similarity
-
 RETURN
 person1.firstName + ' ' +  person1.lastName as p1,
-person2.firstName  + ' ' +   person2.lastName as p2, similarity
-ORDER BY similarity DESC LIMIT 50<!--/code--></pre>
+person2.firstName  + ' ' +   person2.lastName as p2, similarity;<!--/code--></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -590,20 +472,6 @@ ORDER BY watchCount DESC LIMIT 10<!--/code--></pre>
 </li>
 <li>
 <p><a href="https://github.com/neo4j-graph-examples/" target="_blank">Other Example Datasets</a></p>
-</li>
-</ul>
-</div>
-
-
-
-   <h4>More code</h4>
-   <div class="ulist">
-<ul>
-<li>
-<p><a play-topic="movie-graph">Movie Graph</a> - actors & movies</p>
-</li>
-<li>
-<p><a play-topic="cypher">Cypher</a> - query language fundamentals</p>
 </li>
 </ul>
 </div>

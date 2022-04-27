@@ -42,6 +42,7 @@ endif::[]
 * Recommend: Generate recommendation based on user similarities / preferences
 * Additional: Try couple of preference based similarities and recommendation examples
 
+ifndef::env-auradb[]
 === Notes
 
 In this demonstration, we have used Neo4j APOC (Awesome Procedures on Cypher) and Neo4j GDS (Graph Data Science) libraries few Cypher queries.
@@ -51,7 +52,7 @@ For more details on APOC and GDS, please refer below links.
 
 * https://neo4j.com/developer/neo4j-apoc/[APOC^]
 * https://neo4j.com/docs/graph-data-science/current/[GDS^]
-
+endif::env-auradb[]
 
 ifndef::env-guide[]
 == Load Users, Ip Addresses and connect Users with IP Addresses
@@ -261,7 +262,7 @@ MATCH (f:Family)<-[b:BELONGS_TO]-(u:User)
 RETURN f, b, u LIMIT 200
 ----
 
-== Generate recommendation based on user's family or group similarities / preferences
+== Generate recommendation based on user family or group similarities / preferences
 
 Providing recommendation to the member based on his/her account/family members history. Get preferred genres by other account members and suggest top 5 movies from most watched genres.
 
@@ -286,6 +287,8 @@ RETURN g.name as genre, totalMovies, movies as topFiveMovies
 ORDER BY totalMovies DESC LIMIT 10
 ----
 
+ifndef::env-auradb[]
+
 == Using Neo4j Node Similarity Algorigthm to find similar users and get recommendations
 
 Find users based on their movie watching preferences using Node Similarity algorithm
@@ -296,7 +299,7 @@ Step 1: For this, we will first create an in-memory graph with node and relation
 
 [source,cypher]
 ----
-CALL gds.graph.create(
+CALL gds.graph.project(
     'similarityGraph',
     // labels
     ['User', 'Movie'],
@@ -333,13 +336,12 @@ Step 3: Execute algorithm and show results
 CALL gds.nodeSimilarity.stream('similarityGraph')
 // return ids and similarity
 YIELD node1, node2, similarity
+ORDER BY similarity DESC LIMIT 50
 // fetch nodes by id
 WITH gds.util.asNode(node1) AS person1, gds.util.asNode(node2) AS person2, similarity
-
 RETURN 
 person1.firstName + ' ' +  person1.lastName as p1,
-person2.firstName  + ' ' +   person2.lastName as p2, similarity 
-ORDER BY similarity DESC LIMIT 50
+person2.firstName  + ' ' +   person2.lastName as p2, similarity; 
 ----
 
 Step 4: Get recommendations for a user based on similarity. For a user, fetch recommendations based on other similar users' preferences
@@ -419,6 +421,7 @@ WITH  DISTINCT m as movies, SUM(w.watchCount) as watchCount
 RETURN movies order by watchCount
 ----
 ////
+endif::env-auradb[]
 
 == Next steps
 
@@ -427,11 +430,6 @@ RETURN movies order by watchCount
 * https://github.com/neo4j-graph-examples/enitity_resolution[Source Code with Cypher and data dumps^]
 
 * https://github.com/neo4j-graph-examples/[Other Example Datasets^]
-
-=== More code
-
-* pass:a[<a play-topic="movie-graph">Movie Graph</a> - actors & movies]
-* pass:a[<a play-topic="cypher">Cypher</a> - query language fundamentals]
 
 === References
 
