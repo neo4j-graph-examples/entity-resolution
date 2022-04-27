@@ -418,7 +418,7 @@ YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory<!--/code-
 <pre mode="cypher"  class="highlight pre-scrollable programlisting cm-s-neo code runnable standalone-example ng-binding" data-lang="cypher" lang="cypher"><!--code class="cypher language-cypher"-->CALL gds.nodeSimilarity.stream('similarityGraph')
 // return ids and similarity
 YIELD node1, node2, similarity
-ORDER BY similarity DESC LIMIT 50
+WITH * ORDER BY similarity DESC LIMIT 50
 // fetch nodes by id
 WITH gds.util.asNode(node1) AS person1, gds.util.asNode(node2) AS person2, similarity
 RETURN
