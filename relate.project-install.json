@@ -1,6 +1,7 @@
 {
     "name": "entity-resolution",
     "description":"Entity Resolution, Record Linkage and Similarity wise recommendation with Neo4j",
+    "icon": "documentation/img/entity-resolution-icon.svg",
     "dbms": [
       {
           "dumpFile": "data/entity_resolution-44.dump",
