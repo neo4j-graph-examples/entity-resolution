@@ -5,12 +5,17 @@
     "dbms": [
       {
           "dumpFile": "data/entity_resolution-44.dump",
-          "targetNeo4jVersion":"4.4.*",
+          "targetNeo4jVersion": ">=4.4.0 <5.0.0",
           "plugins": ["apoc", "graph-data-science"]
       },
 	  {
           "dumpFile": "data/entity-resolution-43.dump",
-          "targetNeo4jVersion":"4.3.*",
+          "targetNeo4jVersion": ">=4.3.0 <4.4.0",
+          "plugins": ["apoc", "graph-data-science"]
+      },
+	  {
+          "dumpFile": "data/entity-resolution-50.dump",
+          "targetNeo4jVersion": ">=5.0.0 <6.0.0",
           "plugins": ["apoc", "graph-data-science"]
       }
   ]
