@@ -191,12 +191,12 @@ WITH a, b, a.firstName + ' ' + a.lastName AS name1, b.firstName + ' ' + b.lastNa
 
 // compute different similiarities
 WITH *,
-toInteger(apoc.text.jaroWinklerDistance(name1, name2) * 100) AS nameSimilarity,
-toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
-toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity
+toInteger(apoc.text.sorensenDiceSimilarity(name1, name2) * 100) AS nameSimilarity,
+toInteger(apoc.text.sorensenDiceSimilarity(a.email, b.email) * 100) AS emailSimilarity,
+toInteger(apoc.text.sorensenDiceSimilarity(a.phone, b.phone) * 100) AS phoneSimilarity
 
-// compute a total similarity score 
-WITH a, b, name1, name2, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity 
+// compute a total similarity score
+WITH a, b, name1, name2, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity
 
 // filter
 WHERE similarity >= 90
