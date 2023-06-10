@@ -172,12 +172,11 @@ ORDER BY freq DESC
 
 These are users who have same/similar names but different (redundant) profiles due to typos or abbreviations used for some instances. 
 
-We are using the Jaro Winkler Distance algorithm from the Neo4j APOC library.
+We are using the Sorensen Dice Similarity algorithm from the Neo4j APOC library.
 
 References
 
-* https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance[Jaro–Winkler distance^]
-* https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.jaroWinklerDistance/[apoc.text.jaroWinklerDistance^]
+* https://neo4j.com/labs/apoc/4.1/overview/apoc.text/apoc.text.sorensenDiceSimilarity[apoc.text.sorensenDiceSimilarity^]
 
 [source,cypher]
 ----
