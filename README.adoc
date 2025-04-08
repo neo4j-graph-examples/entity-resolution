@@ -271,9 +271,9 @@ MATCH (b:User)
 WHERE a.firstName + a.lastName <> b.firstName + b.lastName
 WITH a, b, a.firstName + a.lastName AS norm1, b.firstName + b.lastName AS norm2
 WITH 
-toInteger(apoc.text.jaroWinklerDistance(norm1, norm2) * 100) AS nameSimilarity,
-toInteger(apoc.text.jaroWinklerDistance(a.email, b.email) * 100) AS emailSimilarity,
-toInteger(apoc.text.jaroWinklerDistance(a.phone, b.phone) * 100) AS phoneSimilarity, a, b
+toInteger((1-apoc.text.jaroWinklerDistance(norm1, norm2)) * 100) AS nameSimilarity,
+toInteger((1-apoc.text.jaroWinklerDistance(a.email, b.email)) * 100) AS emailSimilarity,
+toInteger((1-apoc.text.jaroWinklerDistance(a.phone, b.phone)) * 100) AS phoneSimilarity, a, b
 WITH a, b, toInteger((nameSimilarity + emailSimilarity + phoneSimilarity)/3) as similarity WHERE similarity >= 90
 RETURN a.firstName + a.lastName AS p1, b.firstName + b.lastName AS p2, a.email, b.email,  similarity
 ----
